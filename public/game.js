@@ -319,6 +319,97 @@ function makeCar(color = 0xe83d4d, modelType = 0, isPlayer = false) {
   return car;
 }
 
+function makeTruck(color = 0xd9d9d9) {
+  const truck = new THREE.Group();
+  const paint = new THREE.MeshStandardMaterial({ color, roughness: 0.62, metalness: 0.12 });
+  const dark = mat(0x252a30, 0.75);
+  const glass = new THREE.MeshStandardMaterial({ color: 0x263b4a, roughness: 0.2, metalness: 0.12 });
+  const silver = mat(0x9aa2a8, 0.42);
+
+  // Long box trailer behind the cab (the truck faces toward -Z).
+  const trailer = new THREE.Mesh(new THREE.BoxGeometry(2.48, 3.05, 7.25), paint);
+  trailer.position.set(0, 2.18, 2.05);
+  trailer.castShadow = true;
+  trailer.receiveShadow = true;
+  truck.add(trailer);
+  const trailerRoof = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.1, 7.28), silver);
+  trailerRoof.position.set(0, 3.76, 2.05);
+  truck.add(trailerRoof);
+  const rearDoors = new THREE.Mesh(new THREE.BoxGeometry(2.38, 2.9, 0.07), mat(0xb9c0c4, 0.6));
+  rearDoors.position.set(0, 2.18, 5.7);
+  truck.add(rearDoors);
+  for (const x of [-0.58, 0.58]) {
+    const hinge = new THREE.Mesh(new THREE.BoxGeometry(0.045, 2.7, 0.09), dark);
+    hinge.position.set(x, 2.18, 5.76);
+    truck.add(hinge);
+  }
+  const chassis = new THREE.Mesh(new THREE.BoxGeometry(2.25, 0.32, 9.3), dark);
+  chassis.position.set(0, 0.72, 0.45);
+  truck.add(chassis);
+
+  // Tractor cab with windshield, side windows, grille and mirrors.
+  const cab = new THREE.Mesh(new THREE.BoxGeometry(2.42, 2.65, 2.55), paint);
+  cab.position.set(0, 1.85, -3.35);
+  cab.castShadow = true;
+  cab.receiveShadow = true;
+  truck.add(cab);
+  const cabRoof = new THREE.Mesh(new THREE.BoxGeometry(2.35, 0.16, 1.95), paint);
+  cabRoof.position.set(0, 3.22, -3.43);
+  truck.add(cabRoof);
+  const windshield = new THREE.Mesh(new THREE.BoxGeometry(2.08, 0.95, 0.055), glass);
+  windshield.position.set(0, 2.55, -4.64);
+  truck.add(windshield);
+  for (const side of [-1, 1]) {
+    const sideWindow = new THREE.Mesh(new THREE.BoxGeometry(0.055, 0.95, 1.25), glass);
+    sideWindow.position.set(side * 1.225, 2.55, -3.35);
+    truck.add(sideWindow);
+    const mirrorArm = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 0.62), dark);
+    mirrorArm.position.set(side * 1.36, 2.35, -4.05);
+    truck.add(mirrorArm);
+    const mirror = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.32, 0.24), dark);
+    mirror.position.set(side * 1.42, 2.35, -4.34);
+    truck.add(mirror);
+    const fuelTank = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.42, 1.1), silver);
+    fuelTank.position.set(side * 1.12, 0.78, -1.75);
+    truck.add(fuelTank);
+  }
+  const grille = new THREE.Mesh(new THREE.BoxGeometry(1.12, 0.82, 0.08), dark);
+  grille.position.set(0, 1.55, -4.66);
+  truck.add(grille);
+  for (let y = 1.28; y <= 1.82; y += 0.18) {
+    const bar = new THREE.Mesh(new THREE.BoxGeometry(1.02, 0.035, 0.095), silver);
+    bar.position.set(0, y, -4.72);
+    truck.add(bar);
+  }
+  for (const x of [-0.88, 0.88]) {
+    const headlamp = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.24, 0.09),
+      new THREE.MeshStandardMaterial({ color: 0xfff0c8, emissive: 0x9b824c, emissiveIntensity: 0.55 }));
+    headlamp.position.set(x, 1.05, -4.68);
+    truck.add(headlamp);
+    const tail = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.52, 0.08),
+      new THREE.MeshStandardMaterial({ color: 0xe32c36, emissive: 0x71000a, emissiveIntensity: 0.45 }));
+    tail.position.set(x * 1.18, 1.12, 5.72);
+    truck.add(tail);
+  }
+
+  // Three axles on the tractor/trailer combination.
+  for (const z of [-3.75, 2.95, 4.65]) {
+    for (const x of [-1.28, 1.28]) {
+      const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.48, 0.48, 0.28, 14), dark);
+      wheel.rotation.z = Math.PI / 2;
+      wheel.position.set(x, 0.53, z);
+      wheel.castShadow = true;
+      truck.add(wheel);
+      const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.3, 12), silver);
+      hub.rotation.z = Math.PI / 2;
+      hub.position.set(x * 1.005, 0.53, z);
+      truck.add(hub);
+    }
+  }
+  truck.userData.collisionLength = 10.5;
+  return truck;
+}
+
 const player = makeCar(0xe83d4d, 0, false);
 player.position.set(0, 0, 4);
 scene.add(player);
@@ -336,7 +427,10 @@ if (bestDistanceEl) bestDistanceEl.textContent = "REKORD " + bestDistanceKm.toFi
 let lastRecordSave = 0;
 for (let i = 0; i < 10; i++) {
   const lane = trafficLanes[i % trafficLanes.length];
-  const car = makeCar([0x36a2ff, 0xf2b544, 0x9bd06a, 0xb7a2ff, 0xe7e7e7, 0xff884d][i], i);
+  const isTruck = i === 3 || i === 8;
+  const car = isTruck
+    ? makeTruck([0xd9d9d9, 0xe2d4b8][i === 3 ? 0 : 1])
+    : makeCar([0x36a2ff, 0xf2b544, 0x9bd06a, 0xb7a2ff, 0xe7e7e7, 0xff884d][i], i);
   car.scale.setScalar(0.84);
   car.position.set(roadCenter(48 + i * 25) + lane, 0, -48 - i * 25);
   scene.add(car);
@@ -348,7 +442,8 @@ for (let i = 0; i < 10; i++) {
     speed: 76 + Math.random() * 62,
     z: -48 - i * 25,
     targetLane: lane,
-    laneTimer: 3 + Math.random() * 7
+    laneTimer: 3 + Math.random() * 7,
+    collisionLength: (car.userData.collisionLength || 3.65) * 0.84
   });
 }
 
@@ -882,7 +977,7 @@ function animate(now) {
     traffic.mesh.position.x = roadCenter(travel - traffic.z) + traffic.lane;
     traffic.mesh.rotation.y = -roadHeading(travel - traffic.z);
 
-    if (collisionCooldown <= 0 && Math.abs(traffic.z - 4) < 2.6 && Math.abs(laneX - traffic.lane) < 1.65) {
+    if (collisionCooldown <= 0 && Math.abs(traffic.z - 4) < traffic.collisionLength / 2 + 1.8 && Math.abs(laneX - traffic.lane) < 1.85) {
       speedKmh = Math.max(20, speedKmh * 0.42);
       laneX = THREE.MathUtils.clamp(laneX + (laneX <= traffic.lane ? -1.8 : 1.8), -7.1, 7.1);
       collisionCooldown = 1.25;
@@ -909,7 +1004,7 @@ function animate(now) {
         if (Math.abs(a.lane - b.lane) >= 1.9) continue;
         const front = a.z < b.z ? a : b;
         const rear = a.z < b.z ? b : a;
-        const safeGap = 4.4;
+        const safeGap = (front.collisionLength + rear.collisionLength) / 2 + 1.5;
         if (rear.z - front.z < safeGap) {
           rear.z = front.z + safeGap;
           rear.mesh.position.z = rear.z;
