@@ -36,7 +36,10 @@ scene.add(ground);
 
 // Short road sections follow one continuous, gently winding road.
 function roadCenter(station) {
-  return 17 * Math.sin(station / 245) + 7 * Math.sin(station / 108 + 0.8);
+  return 24 * Math.sin(station / 230) + 10 * Math.sin(station / 105 + 0.8);
+}
+function roadHeading(station) {
+  return Math.atan2(roadCenter(station + 1) - roadCenter(station - 1), 2);
 }
 const roadSections = [];
 const curbSections = [];
@@ -247,28 +250,36 @@ function animate(now) {
   roadSections.forEach(section => {
     section.position.z += metres;
     if (section.position.z > 24) section.position.z -= 320;
-    section.position.x = roadCenter(travel - section.position.z);
+    const station = travel - section.position.z;
+    section.position.x = roadCenter(station);
+    section.rotation.y = -roadHeading(station);
   });
   curbSections.forEach(({ mesh, side }) => {
     mesh.position.z += metres;
     if (mesh.position.z > 24) mesh.position.z -= 320;
-    mesh.position.x = roadCenter(travel - mesh.position.z) + side * 9.25;
+    const station = travel - mesh.position.z;
+    mesh.position.x = roadCenter(station) + side * 9.25;
+    mesh.rotation.y = -roadHeading(station);
   });
   dashes.forEach(({ mesh, lane }) => {
     mesh.position.z += metres;
     if (mesh.position.z > 24) mesh.position.z -= 312;
-    mesh.position.x = roadCenter(travel - mesh.position.z) + lane;
+    const station = travel - mesh.position.z;
+    mesh.position.x = roadCenter(station) + lane;
+    mesh.rotation.y = -roadHeading(station);
   });
   roadside.forEach(object => {
     object.position.z += metres;
     if (object.position.z > 28) object.position.z -= 374;
-    object.position.x = roadCenter(travel - object.position.z) + object.userData.sideOffset;
+    const station = travel - object.position.z;
+    object.position.x = roadCenter(station) + object.userData.sideOffset;
+    object.rotation.y = -roadHeading(station);
   });
 
   const playerCenter = roadCenter(travel - 4);
   player.position.x = playerCenter + laneX;
   player.rotation.z = -steering * 0.12 * speedFactor;
-  player.rotation.y = -steering * 0.08;
+  player.rotation.y = -roadHeading(travel - 4) - steering * 0.08;
   const cameraCenter = roadCenter(travel - 12);
   camera.position.x = THREE.MathUtils.damp(camera.position.x, cameraCenter + laneX * 0.28, 3.5, dt);
   camera.lookAt(roadCenter(travel + 12) + laneX * 0.15, 0.65, -12);
