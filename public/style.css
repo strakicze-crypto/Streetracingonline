@@ -13,3 +13,5 @@
 .menu-panel>p{color:#b9c5d5;font-size:13px}.score-line{padding:13px;margin:12px 0 8px;border-radius:10px;background:#ffffff0c;color:#c7d2e1;font-size:11px;letter-spacing:1px}.score-line strong{display:block;margin-top:4px;font-size:25px;color:#fff}
 .leaderboard-list{list-style:none;padding:0;margin:0;text-align:left}.leaderboard-list li{display:flex;justify-content:space-between;gap:12px;padding:10px 12px;border-bottom:1px solid #ffffff14;color:#dce5f0;font-size:13px}.leaderboard-list li strong{color:#ffcf70}
 [hidden]{display:none!important}
+
+#drive-score{color:#ffcf70!important;font-weight:900;font-size:13px;text-shadow:0 1px 8px #000}
