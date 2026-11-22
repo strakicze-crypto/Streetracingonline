@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <meta name="theme-color" content="#090d16">
+  <meta name="description" content="Street Racing Online — mobile browser racing prototype">
+  <title>Street Racing Online</title>
+  <link rel="stylesheet" href="/style.css">
+  <script type="importmap">
+    { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js" } }
+  </script>
+</head>
+<body>
+  <div id="game"></div>
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark">S</span><div><b>STREET RACING</b><small>ONLINE</small></div></div>
+    <div class="online"><i></i><span id="connection">PŘIPOJOVÁNÍ</span></div>
+  </header>
+  <section class="hud">
+    <div class="speed"><strong id="speed">000</strong><span>KM/H</span></div>
+    <div class="race-info"><b>FREE RIDE</b><span id="players">1 / 10 RIDERS</span></div>
+  </section>
+  <div class="hint" id="hint">DRŽ PLYN A VYHÝBEJ SE PROVOZU</div>
+  <div class="controls">
+    <div class="steering">
+      <button id="left" aria-label="Doleva">◀</button>
+      <button id="right" aria-label="Doprava">▶</button>
+    </div>
+    <div class="pedals">
+      <button id="brake" class="brake">BRZDA</button>
+      <button id="gas" class="gas">PLYN</button>
+    </div>
+  </div>
+  <div class="desktop-help">WASD / ŠIPKY · R = RESET</div>
+  <script type="module" src="/game.js"></script>
+</body>
+</html>
