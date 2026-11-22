@@ -158,12 +158,14 @@ for (let i = 0; i < 34; i++) {
 
     // The facade faces the road: windows are inset into visible frames.
     const facadeX = side === -1 ? w / 2 + 0.035 : -w / 2 - 0.035;
+    const doorZ = depth * 0.22;
     const floors = Math.max(1, Math.floor((h - 2.2) / 3.1));
     const columns = Math.max(2, Math.floor(depth / 2.25));
     for (let floor = 0; floor < floors; floor++) {
       const y = 1.65 + floor * 3.05;
       for (let col = 0; col < columns; col++) {
         const windowZ = -depth / 2 + (col + 0.5) * depth / columns;
+        if (floor === 0 && Math.abs(windowZ - doorZ) < 0.9) continue;
         const frame = new THREE.Mesh(new THREE.BoxGeometry(0.13, 1.35, 1.12), facadeMaterials.frame);
         frame.position.set(facadeX, y, windowZ);
         buildingGroup.add(frame);
@@ -176,7 +178,6 @@ for (let i = 0; i < 34; i++) {
       }
     }
     // A street-level entrance with a small canopy.
-    const doorZ = depth * 0.22;
     const door = new THREE.Mesh(new THREE.BoxGeometry(0.16, 2.05, 1.05), facadeMaterials.door);
     door.position.set(facadeX + (side === -1 ? 0.09 : -0.09), 1.0, doorZ);
     buildingGroup.add(door);
