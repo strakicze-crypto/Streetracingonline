@@ -302,7 +302,7 @@ function makeCar(color = 0xe83d4d, modelType = 0, isPlayer = false) {
   return car;
 }
 
-const player = makeCar(0xb9c0c6, 0, true);
+const player = makeCar(0xe83d4d, 0, false);
 player.position.set(0, 0, 4);
 scene.add(player);
 
