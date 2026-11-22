@@ -19,6 +19,7 @@ const resumeButton = document.getElementById("resume-button");
 const changeDifficultyButton = document.getElementById("change-difficulty-button");
 const leaderboardList = document.getElementById("leaderboard-list");
 const currentScoreEl = document.getElementById("current-score");
+const driveScoreEl = document.getElementById("drive-score");
 const nicknameKey = "sro_player_nickname";
 let nickname = "";
 try { nickname = localStorage.getItem(nicknameKey) || ""; } catch {}
@@ -418,6 +419,7 @@ scene.add(player);
 const trafficCars = [];
 const trafficLanes = [-5, 0, 5];
 let overtakes = 0;
+let collisionPenalties = 0;
 let collisionCooldown = 0;
 const bestDistanceKey = "sro_best_distance_km";
 let bestDistanceKm = 0;
@@ -474,7 +476,7 @@ function showDifficulty() {
   nicknameStep.hidden = true;
   gameStarted = false;
 }
-function scoreNow() { return Math.floor(travel) + overtakes * 100; }
+function scoreNow() { return Math.max(0, Math.floor(travel) + overtakes * 100 - collisionPenalties); }
 async function saveScore() {
   if (!nickname || !gameStarted || scoreNow() <= 0) return;
   try {
@@ -507,7 +509,8 @@ function openPause() {
 }
 function closePause() { gamePaused = false; pauseScreen.classList.add("hidden"); }
 function resetRace() {
-  speedKmh = 0; laneX = 0; lateralVelocity = 0; travel = 0; overtakes = 0; collisionCooldown = 0;
+  speedKmh = 0; laneX = 0; lateralVelocity = 0; travel = 0; overtakes = 0; collisionPenalties = 0; collisionCooldown = 0;
+  if (driveScoreEl) driveScoreEl.textContent = "BODY 0";
   if (overtakesEl) overtakesEl.textContent = "PŘEDJETÍ 0";
   if (distanceEl) distanceEl.textContent = "JÍZDA 0.00 KM";
   trafficCars.forEach((traffic, i) => {
@@ -981,6 +984,7 @@ function animate(now) {
       speedKmh = Math.max(20, speedKmh * 0.42);
       laneX = THREE.MathUtils.clamp(laneX + (laneX <= traffic.lane ? -1.8 : 1.8), -7.1, 7.1);
       collisionCooldown = 1.25;
+      collisionPenalties += 100;
       if (hintEl) {
         hintEl.textContent = "KOLIZE! ZPOMALIL JSI";
         hintEl.style.color = "#ff6875";
@@ -1035,6 +1039,7 @@ function animate(now) {
   });
 
   speedEl.textContent = String(Math.round(speedKmh)).padStart(3, "0");
+  if (driveScoreEl) driveScoreEl.textContent = "BODY " + scoreNow().toLocaleString("cs-CZ");
   const distanceKm = travel / 1000;
   if (distanceEl) distanceEl.textContent = "JÍZDA " + distanceKm.toFixed(2) + " KM";
   if (distanceKm > bestDistanceKm) {
