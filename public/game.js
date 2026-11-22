@@ -899,6 +899,26 @@ function animate(now) {
     }
   });
 
+  // NPC cars must keep a safe following distance and never overlap.
+  // In this coordinate system, the car with the larger Z value is behind.
+  for (let pass = 0; pass < 2; pass++) {
+    for (let i = 0; i < activeTrafficCount; i++) {
+      for (let j = i + 1; j < activeTrafficCount; j++) {
+        const a = trafficCars[i];
+        const b = trafficCars[j];
+        if (Math.abs(a.lane - b.lane) >= 1.9) continue;
+        const front = a.z < b.z ? a : b;
+        const rear = a.z < b.z ? b : a;
+        const safeGap = 4.4;
+        if (rear.z - front.z < safeGap) {
+          rear.z = front.z + safeGap;
+          rear.mesh.position.z = rear.z;
+          rear.mesh.position.x = roadCenter(travel - rear.z) + rear.lane;
+        }
+      }
+    }
+  }
+
   const playerCenter = roadCenter(travel - 4);
   player.position.x = playerCenter + laneX;
   player.rotation.z = -steering * 0.105 * speedFactor - lateralVelocity * 0.012;
