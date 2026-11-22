@@ -127,12 +127,12 @@ function makeCar(color = 0xe83d4d, modelType = 0, isPlayer = false) {
   // Windscreen, rear glass and side windows give each body a recognisable car silhouette.
   const glassMat = new THREE.MeshStandardMaterial({ color: 0x8bb4c9, roughness: 0.18, metalness: 0.18 });
   const frontGlass = new THREE.Mesh(new THREE.BoxGeometry(spec.cabinW * 0.88, spec.cabinH * 0.38, 0.055), glassMat);
-  frontGlass.position.set(0, spec.roofY + 0.015, spec.cabinZ - spec.cabinL * 0.49);
-  frontGlass.rotation.x = -0.16;
+  frontGlass.position.set(0, isPlayer ? 1.39 : spec.roofY + 0.015, isPlayer ? -0.82 : spec.cabinZ - spec.cabinL * 0.49);
+  frontGlass.rotation.x = isPlayer ? -0.48 : -0.16;
   car.add(frontGlass);
   const rearGlass = new THREE.Mesh(new THREE.BoxGeometry(spec.cabinW * 0.84, spec.cabinH * 0.34, 0.05), glassMat);
-  rearGlass.position.set(0, spec.roofY, spec.cabinZ + spec.cabinL * 0.49);
-  rearGlass.rotation.x = 0.18;
+  rearGlass.position.set(0, isPlayer ? 1.39 : spec.roofY, isPlayer ? 1.02 : spec.cabinZ + spec.cabinL * 0.49);
+  rearGlass.rotation.x = isPlayer ? 0.48 : 0.18;
   car.add(rearGlass);
   for (const side of [-1, 1]) {
     if (isPlayer) {
