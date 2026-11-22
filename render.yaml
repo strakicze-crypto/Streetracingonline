@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: street-racing-online
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    autoDeploy: true
