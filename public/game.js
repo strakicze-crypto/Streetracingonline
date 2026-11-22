@@ -258,10 +258,11 @@ for (let i = 0; i < 34; i++) {
       rightArm.add(armB);
       person.add(rightArm);
       person.position.set(side * 1.25, 0.1, (Math.random() - 0.5) * 5.5);
-      person.rotation.y = side === -1 ? Math.PI / 2 : -Math.PI / 2;
+      const walkDirection = Math.random() > 0.5 ? 1 : -1;
+      person.rotation.y = walkDirection > 0 ? Math.PI : 0;
       person.traverse(part => { if (part.isMesh) { part.castShadow = true; part.receiveShadow = true; } });
       pathGroup.add(person);
-      pedestrians.push({ leftLeg, rightLeg, leftArm, rightArm, phase: Math.random() * Math.PI * 2, pace: 2.8 + Math.random() * 0.7 });
+      pedestrians.push({ person, leftLeg, rightLeg, leftArm, rightArm, phase: Math.random() * Math.PI * 2, pace: 0.75 + Math.random() * 0.45, direction: walkDirection, minZ: -4.2, maxZ: 4.2 });
     }
 
     // Small street furniture makes the sidewalks feel like part of a town.
@@ -488,12 +489,23 @@ function animate(now) {
     object.rotation.y = -roadHeading(station);
   });
 
-  pedestrians.forEach(person => {
-    const stride = Math.sin(now * 0.001 * person.pace + person.phase) * 0.48;
-    person.leftLeg.rotation.x = stride;
-    person.rightLeg.rotation.x = -stride;
-    person.leftArm.rotation.x = -stride * 0.65;
-    person.rightArm.rotation.x = stride * 0.65;
+  pedestrians.forEach(walker => {
+    // Walk along the sidewalk, turn around at the ends, and keep the leg cycle in step.
+    walker.person.position.z += walker.direction * walker.pace * dt;
+    if (walker.person.position.z > walker.maxZ) {
+      walker.person.position.z = walker.maxZ;
+      walker.direction = -1;
+      walker.person.rotation.y = 0;
+    } else if (walker.person.position.z < walker.minZ) {
+      walker.person.position.z = walker.minZ;
+      walker.direction = 1;
+      walker.person.rotation.y = Math.PI;
+    }
+    const stride = Math.sin(now * 0.001 * walker.pace * 2.2 + walker.phase) * 0.48;
+    walker.leftLeg.rotation.x = stride;
+    walker.rightLeg.rotation.x = -stride;
+    walker.leftArm.rotation.x = -stride * 0.65;
+    walker.rightArm.rotation.x = stride * 0.65;
   });
 
   // Traffic moves at its own speed. Faster driving closes the gap and allows overtaking.
