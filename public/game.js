@@ -258,6 +258,39 @@ for (let i = 0; i < 34; i++) {
       pedestrians.push({ leftLeg, rightLeg, leftArm, rightArm, phase: Math.random() * Math.PI * 2, pace: 2.8 + Math.random() * 0.7 });
     }
 
+    // Small street furniture makes the sidewalks feel like part of a town.
+    if (i % 7 === 2) {
+      const bench = new THREE.Group();
+      const wood = mat(0x79583c);
+      const darkMetal = mat(0x343a40);
+      const seat = new THREE.Mesh(new THREE.BoxGeometry(1.35, 0.12, 0.42), wood);
+      seat.position.y = 0.62;
+      bench.add(seat);
+      const back = new THREE.Mesh(new THREE.BoxGeometry(1.35, 0.58, 0.1), wood);
+      back.position.set(0, 0.94, 0.2);
+      bench.add(back);
+      for (const x of [-0.52, 0.52]) {
+        const leg = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.58, 0.34), darkMetal);
+        leg.position.set(x, 0.3, 0);
+        bench.add(leg);
+      }
+      bench.position.set(side * 1.0, 0.08, (i % 2 ? -2.6 : 2.6));
+      bench.rotation.y = side === -1 ? Math.PI / 2 : -Math.PI / 2;
+      pathGroup.add(bench);
+    }
+
+    if (i % 5 === 0) {
+      const bin = new THREE.Group();
+      const binBody = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.25, 0.72, 10), mat(0x52645c));
+      binBody.position.y = 0.43;
+      bin.add(binBody);
+      const lid = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 0.09, 10), mat(0x303b37));
+      lid.position.y = 0.82;
+      bin.add(lid);
+      bin.position.set(side * 1.65, 0.08, (i % 2 ? 3.2 : -3.2));
+      pathGroup.add(bin);
+    }
+
     const pathOffset = side * 12.55;
     pathGroup.position.set(roadCenter(-z) + pathOffset, 0, z);
     pathGroup.userData.sideOffset = pathOffset;
