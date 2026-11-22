@@ -130,42 +130,92 @@ for (let i = 0; i < 6; i++) {
   });
 }
 
-// Buildings and streetlights follow the road instead of forming a straight skyline.
+// Detailed roadside buildings with road-facing windows, frames and entrance doors.
 const roadside = [];
+const facadeMaterials = {
+  frame: mat(0xd2c9b8),
+  glass: new THREE.MeshStandardMaterial({ color: 0x426477, roughness: 0.22, metalness: 0.25 }),
+  litGlass: new THREE.MeshStandardMaterial({ color: 0xd8bd83, emissive: 0x6b4c20, emissiveIntensity: 0.28, roughness: 0.35 }),
+  door: mat(0x46382f),
+  trim: mat(0xeee4d1)
+};
 for (let i = 0; i < 34; i++) {
   const z = -i * 11 - 8;
   for (const side of [-1, 1]) {
-    const w = 3 + Math.random() * 5;
-    const h = 5 + Math.random() * 18;
-    const offset = side * (15 + Math.random() * 12);
+    const w = 4 + Math.random() * 4;
+    const h = 6 + Math.random() * 15;
+    const depth = 6 + Math.random() * 4;
+    const offset = side * (16 + Math.random() * 12);
+    const buildingGroup = new THREE.Group();
     const building = new THREE.Mesh(
-      new THREE.BoxGeometry(w, h, 5 + Math.random() * 4),
-      mat([0x78818c, 0x9a9b98, 0x687987, 0xb0a79c][i % 4])
+      new THREE.BoxGeometry(w, h, depth),
+      mat([0x85827b, 0xa99b88, 0x687987, 0xb8b1a5, 0x777b80][i % 5])
     );
-    building.position.set(roadCenter(-z) + offset, h / 2 - 0.05, z);
+    building.position.y = h / 2 - 0.05;
     building.castShadow = true;
     building.receiveShadow = true;
-    building.userData.sideOffset = offset;
-    scene.add(building);
-    roadside.push(building);
+    buildingGroup.add(building);
 
+    // The facade faces the road: windows are inset into visible frames.
+    const facadeX = side === -1 ? w / 2 + 0.035 : -w / 2 - 0.035;
+    const floors = Math.max(1, Math.floor((h - 2.2) / 3.1));
+    const columns = Math.max(2, Math.floor(depth / 2.25));
+    for (let floor = 0; floor < floors; floor++) {
+      const y = 1.65 + floor * 3.05;
+      for (let col = 0; col < columns; col++) {
+        const windowZ = -depth / 2 + (col + 0.5) * depth / columns;
+        const frame = new THREE.Mesh(new THREE.BoxGeometry(0.13, 1.35, 1.12), facadeMaterials.frame);
+        frame.position.set(facadeX, y, windowZ);
+        buildingGroup.add(frame);
+        const pane = new THREE.Mesh(new THREE.BoxGeometry(0.055, 1.08, 0.84), Math.random() > 0.72 ? facadeMaterials.litGlass : facadeMaterials.glass);
+        pane.position.set(facadeX + (side === -1 ? 0.075 : -0.075), y + 0.015, windowZ);
+        buildingGroup.add(pane);
+        const sill = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.09, 1.2), facadeMaterials.trim);
+        sill.position.set(facadeX + (side === -1 ? 0.08 : -0.08), y - 0.7, windowZ);
+        buildingGroup.add(sill);
+      }
+    }
+    // A street-level entrance with a small canopy.
+    const doorZ = depth * 0.22;
+    const door = new THREE.Mesh(new THREE.BoxGeometry(0.16, 2.05, 1.05), facadeMaterials.door);
+    door.position.set(facadeX + (side === -1 ? 0.09 : -0.09), 1.0, doorZ);
+    buildingGroup.add(door);
+    const doorTop = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.16, 1.25), facadeMaterials.trim);
+    doorTop.position.set(facadeX + (side === -1 ? 0.1 : -0.1), 2.12, doorZ);
+    buildingGroup.add(doorTop);
+
+    buildingGroup.position.set(roadCenter(-z) + offset, 0, z);
+    buildingGroup.userData.sideOffset = offset;
+    buildingGroup.traverse(object => {
+      if (object.isMesh) {
+        object.castShadow = true;
+        object.receiveShadow = true;
+      }
+    });
+    scene.add(buildingGroup);
+    roadside.push(buildingGroup);
+  }
+
+  // Much sparser street lighting: one lamp roughly every 33 m, alternating sides.
+  if (i % 3 === 0) {
+    const side = (Math.floor(i / 3) % 2 === 0) ? -1 : 1;
     const pole = new THREE.Group();
-    const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.1, 5, 8), mat(0x333a43));
-    stem.position.y = 2.5;
+    const metal = mat(0x343b43);
+    const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.085, 5.2, 10), metal);
+    stem.position.y = 2.6;
     pole.add(stem);
-    const arm = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.08, 0.08), mat(0x333a43));
-    arm.position.set(-side * 0.6, 4.85, 0);
+    const arm = new THREE.Mesh(new THREE.BoxGeometry(1.15, 0.075, 0.075), metal);
+    arm.position.set(-side * 0.48, 5.05, 0);
     pole.add(arm);
-    const bulb = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.12, 0.3), new THREE.MeshBasicMaterial({ color: 0xffe3a3 }));
-    bulb.position.set(-side * 1.2, 4.8, 0);
+    const bulb = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.13, 0.28), new THREE.MeshStandardMaterial({ color: 0xffe5ad, emissive: 0x80602c, emissiveIntensity: 0.35 }));
+    bulb.position.set(-side * 1.0, 5.0, 0);
     pole.add(bulb);
-    pole.position.set(roadCenter(-z) + side * 10, 0, z);
-    pole.userData.sideOffset = side * 10;
+    pole.position.set(roadCenter(-z) + side * 11, 0, z);
+    pole.userData.sideOffset = side * 11;
     scene.add(pole);
     roadside.push(pole);
   }
 }
-
 const keys = new Set();
 const touch = { left: false, right: false, gas: false, brake: false };
 function bindHold(id, key) {
