@@ -131,7 +131,7 @@ for (let i = 0; i < 6; i++) {
 }
 
 // Detailed roadside buildings with road-facing windows, frames and entrance doors.
-const roadside = [];
+const roadside = [];\nconst pedestrians = [];
 const facadeMaterials = {
   frame: mat(0xd2c9b8),
   glass: new THREE.MeshStandardMaterial({ color: 0x426477, roughness: 0.22, metalness: 0.25 }),
@@ -195,6 +195,74 @@ for (let i = 0; i < 34; i++) {
     });
     scene.add(buildingGroup);
     roadside.push(buildingGroup);
+  }
+
+  // Raised sidewalks and continuous metal crash barriers make the road edge unmistakable.
+  for (const side of [-1, 1]) {
+    const pathGroup = new THREE.Group();
+    const sidewalk = new THREE.Mesh(new THREE.BoxGeometry(5.3, 0.16, 11.25), mat(0xaaa9a1));
+    sidewalk.position.y = -0.025;
+    sidewalk.receiveShadow = true;
+    pathGroup.add(sidewalk);
+
+    const railMetal = mat(0x747d83, 0.48);
+    const rail = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.2, 11.35), railMetal);
+    rail.position.set(-side * 2.42, 0.88, 0);
+    rail.castShadow = true;
+    pathGroup.add(rail);
+    for (const postZ of [-5.35, 0, 5.35]) {
+      const post = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.92, 0.18), railMetal);
+      post.position.set(-side * 2.42, 0.48, postZ);
+      post.castShadow = true;
+      pathGroup.add(post);
+    }
+
+    // Occasional pedestrians, with animated arms and legs, walk along the pavement.
+    if (i % 4 === 1) {
+      const person = new THREE.Group();
+      const clothing = mat([0x344f70, 0x765044, 0x49664b, 0x594d70, 0x9a7047][(i + (side > 0 ? 1 : 0)) % 5]);
+      const skin = mat(0xc99570);
+      const torso = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.72, 0.28), clothing);
+      torso.position.y = 1.12;
+      person.add(torso);
+      const head = new THREE.Mesh(new THREE.SphereGeometry(0.19, 10, 8), skin);
+      head.position.y = 1.62;
+      person.add(head);
+      const leftLeg = new THREE.Group();
+      leftLeg.position.set(-0.12, 0.78, 0);
+      const legA = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.62, 0.16), mat(0x30343b));
+      legA.position.y = -0.31;
+      leftLeg.add(legA);
+      person.add(leftLeg);
+      const rightLeg = new THREE.Group();
+      rightLeg.position.set(0.12, 0.78, 0);
+      const legB = legA.clone();
+      rightLeg.add(legB);
+      person.add(rightLeg);
+      const leftArm = new THREE.Group();
+      leftArm.position.set(-0.27, 1.38, 0);
+      const armA = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.58, 0.14), clothing);
+      armA.position.y = -0.27;
+      leftArm.add(armA);
+      person.add(leftArm);
+      const rightArm = new THREE.Group();
+      rightArm.position.set(0.27, 1.38, 0);
+      const armB = armA.clone();
+      rightArm.add(armB);
+      person.add(rightArm);
+      person.position.set(side * 1.25, 0.1, (Math.random() - 0.5) * 5.5);
+      person.rotation.y = side === -1 ? Math.PI / 2 : -Math.PI / 2;
+      person.traverse(part => { if (part.isMesh) { part.castShadow = true; part.receiveShadow = true; } });
+      pathGroup.add(person);
+      pedestrians.push({ leftLeg, rightLeg, leftArm, rightArm, phase: Math.random() * Math.PI * 2, pace: 2.8 + Math.random() * 0.7 });
+    }
+
+    const pathOffset = side * 12.55;
+    pathGroup.position.set(roadCenter(-z) + pathOffset, 0, z);
+    pathGroup.userData.sideOffset = pathOffset;
+    pathGroup.rotation.y = -roadHeading(-z);
+    scene.add(pathGroup);
+    roadside.push(pathGroup);
   }
 
   // Much sparser street lighting: one lamp roughly every 33 m, alternating sides.
@@ -371,6 +439,14 @@ function animate(now) {
     const station = travel - object.position.z;
     object.position.x = roadCenter(station) + object.userData.sideOffset;
     object.rotation.y = -roadHeading(station);
+  });
+
+  pedestrians.forEach(person => {
+    const stride = Math.sin(now * 0.001 * person.pace + person.phase) * 0.48;
+    person.leftLeg.rotation.x = stride;
+    person.rightLeg.rotation.x = -stride;
+    person.leftArm.rotation.x = -stride * 0.65;
+    person.rightArm.rotation.x = stride * 0.65;
   });
 
   // Traffic moves at its own speed. Faster driving closes the gap and allows overtaking.
