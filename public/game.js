@@ -86,20 +86,43 @@ function makeCar(color = 0xe83d4d, modelType = 0, isPlayer = false) {
     cabinW: 1.48, cabinH: 0.72, cabinL: 2.15, cabinZ: -0.22,
     roofY: 1.2, wheelZ: 1.13, wheelX: 0.98
   } : models[Math.abs(modelType) % models.length];
-  const body = new THREE.Mesh(new THREE.BoxGeometry(spec.width, 0.58, spec.length), mat(color, 0.3));
-  body.position.y = 0.63;
-  body.castShadow = true;
-  body.receiveShadow = true;
-  car.add(body);
-
-  const cabin = new THREE.Mesh(new THREE.BoxGeometry(spec.cabinW, spec.cabinH, spec.cabinL), mat(0x182635, 0.24));
-  cabin.position.set(0, spec.roofY, spec.cabinZ);
-  cabin.castShadow = true;
-  car.add(cabin);
-
-  const roof = new THREE.Mesh(new THREE.BoxGeometry(spec.cabinW * 0.94, 0.075, spec.cabinL * 0.66), mat(color, 0.32));
-  roof.position.set(0, spec.roofY + spec.cabinH * 0.48, spec.cabinZ - 0.02);
-  car.add(roof);
+  const bodyPaint = new THREE.MeshStandardMaterial({ color, roughness: 0.27, metalness: isPlayer ? 0.62 : 0.12 });
+  if (isPlayer) {
+    // Rounded five-door Stilo silhouette, extruded from its side profile.
+    // Local profile X is the car's length; the body is then turned across its width.
+    const profile = new THREE.Shape();
+    const points = [
+      [-1.88, 0.52], [-1.84, 0.78], [-1.68, 0.94], [-1.35, 1.02],
+      [-0.92, 1.04], [-0.55, 1.52], [-0.31, 1.76], [0.66, 1.76],
+      [0.91, 1.62], [1.16, 1.08], [1.58, 1.04], [1.82, 0.88],
+      [1.88, 0.65], [1.82, 0.52], [-1.88, 0.52]
+    ];
+    profile.moveTo(-points[0][0], points[0][1]);
+    for (let i = 1; i < points.length; i++) profile.lineTo(-points[i][0], points[i][1]);
+    const shellGeometry = new THREE.ExtrudeGeometry(profile, {
+      depth: spec.width, bevelEnabled: true, bevelSegments: 2,
+      steps: 1, bevelSize: 0.035, bevelThickness: 0.035, curveSegments: 8
+    });
+    shellGeometry.translate(0, 0, -spec.width / 2);
+    shellGeometry.rotateY(Math.PI / 2);
+    const shell = new THREE.Mesh(shellGeometry, bodyPaint);
+    shell.castShadow = true;
+    shell.receiveShadow = true;
+    car.add(shell);
+  } else {
+    const body = new THREE.Mesh(new THREE.BoxGeometry(spec.width, 0.58, spec.length), bodyPaint);
+    body.position.y = 0.63;
+    body.castShadow = true;
+    body.receiveShadow = true;
+    car.add(body);
+    const cabin = new THREE.Mesh(new THREE.BoxGeometry(spec.cabinW, spec.cabinH, spec.cabinL), mat(0x182635, 0.24));
+    cabin.position.set(0, spec.roofY, spec.cabinZ);
+    cabin.castShadow = true;
+    car.add(cabin);
+    const roof = new THREE.Mesh(new THREE.BoxGeometry(spec.cabinW * 0.94, 0.075, spec.cabinL * 0.66), bodyPaint);
+    roof.position.set(0, spec.roofY + spec.cabinH * 0.48, spec.cabinZ - 0.02);
+    car.add(roof);
+  }
 
   // Windscreen, rear glass and side windows give each body a recognisable car silhouette.
   const glassMat = new THREE.MeshStandardMaterial({ color: 0x8bb4c9, roughness: 0.18, metalness: 0.18 });
