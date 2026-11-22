@@ -977,7 +977,7 @@ function animate(now) {
     traffic.mesh.position.x = roadCenter(travel - traffic.z) + traffic.lane;
     traffic.mesh.rotation.y = -roadHeading(travel - traffic.z);
 
-    if (collisionCooldown <= 0 && Math.abs(traffic.z - 4) < traffic.collisionLength / 2 + 1.8 && Math.abs(laneX - traffic.lane) < 1.85) {
+    if (collisionCooldown <= 0 && Math.abs(traffic.z - 4) < traffic.collisionLength / 2 + 1.8 && Math.abs(laneX - traffic.lane) < 2.35) {
       speedKmh = Math.max(20, speedKmh * 0.42);
       laneX = THREE.MathUtils.clamp(laneX + (laneX <= traffic.lane ? -1.8 : 1.8), -7.1, 7.1);
       collisionCooldown = 1.25;
