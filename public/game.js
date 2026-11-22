@@ -4,6 +4,8 @@ const root = document.getElementById("game");
 const speedEl = document.getElementById("speed");
 const connectionEl = document.getElementById("connection");
 const playersEl = document.getElementById("players");
+const overtakesEl = document.getElementById("overtakes");
+const hintEl = document.getElementById("hint");
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x91b6d0);
@@ -100,6 +102,25 @@ function makeCar(color = 0xe83d4d) {
 const player = makeCar(0xe83d4d);
 player.position.set(0, 0, 4);
 scene.add(player);
+
+// Traffic cars create an actual overtaking challenge on the road.
+const trafficCars = [];
+const trafficLanes = [-5, 0, 5];
+let overtakes = 0;
+let collisionCooldown = 0;
+for (let i = 0; i < 6; i++) {
+  const lane = trafficLanes[i % trafficLanes.length];
+  const car = makeCar([0x36a2ff, 0xf2b544, 0x9bd06a, 0xb7a2ff, 0xe7e7e7, 0xff884d][i]);
+  car.scale.setScalar(0.84);
+  car.position.set(roadCenter(55 + i * 34) + lane, 0, -55 - i * 34);
+  scene.add(car);
+  trafficCars.push({
+    mesh: car,
+    lane,
+    speed: 82 + Math.random() * 58,
+    z: -55 - i * 34
+  });
+}
 
 // Buildings and streetlights follow the road instead of forming a straight skyline.
 const roadside = [];
@@ -274,6 +295,42 @@ function animate(now) {
     const station = travel - object.position.z;
     object.position.x = roadCenter(station) + object.userData.sideOffset;
     object.rotation.y = -roadHeading(station);
+  });
+
+  // Traffic moves at its own speed. Faster driving closes the gap and allows overtaking.
+  collisionCooldown = Math.max(0, collisionCooldown - dt);
+  trafficCars.forEach(traffic => {
+    traffic.z += ((speedKmh - traffic.speed) / 3.6) * dt;
+    if (traffic.z > 12) {
+      overtakes += 1;
+      if (overtakesEl) overtakesEl.textContent = "PŘEDJETÍ " + overtakes;
+      traffic.z = -210 - Math.random() * 90;
+      const choices = trafficLanes.filter(lane => lane !== traffic.lane);
+      traffic.lane = choices[Math.floor(Math.random() * choices.length)];
+      traffic.speed = 82 + Math.random() * 58;
+    } else if (traffic.z < -300) {
+      traffic.z = -75 - Math.random() * 150;
+      traffic.lane = trafficLanes[Math.floor(Math.random() * trafficLanes.length)];
+    }
+    traffic.mesh.position.z = traffic.z;
+    traffic.mesh.position.x = roadCenter(travel - traffic.z) + traffic.lane;
+    traffic.mesh.rotation.y = -roadHeading(travel - traffic.z);
+
+    if (collisionCooldown <= 0 && Math.abs(traffic.z - 4) < 2.6 && Math.abs(laneX - traffic.lane) < 1.65) {
+      speedKmh = Math.max(20, speedKmh * 0.42);
+      laneX = THREE.MathUtils.clamp(laneX + (laneX <= traffic.lane ? -1.8 : 1.8), -7.1, 7.1);
+      collisionCooldown = 1.25;
+      if (hintEl) {
+        hintEl.textContent = "KOLIZE! ZPOMALIL JSI";
+        hintEl.style.color = "#ff6875";
+        setTimeout(() => {
+          if (hintEl) {
+            hintEl.textContent = "VYHÝBEJ SE PROVOZU A PŘEDJÍŽDĚJ";
+            hintEl.style.color = "";
+          }
+        }, 1100);
+      }
+    }
   });
 
   const playerCenter = roadCenter(travel - 4);
