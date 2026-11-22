@@ -9,6 +9,20 @@ const distanceEl = document.getElementById("distance");
 const bestDistanceEl = document.getElementById("best-distance");
 const hintEl = document.getElementById("hint");
 const difficultyScreen = document.getElementById("difficulty-screen");
+const pauseScreen = document.getElementById("pause-screen");
+const pauseButton = document.getElementById("pause-button");
+const nicknameInput = document.getElementById("nickname-input");
+const nicknameStep = document.getElementById("nickname-step");
+const difficultyStep = document.getElementById("difficulty-step");
+const nicknameSave = document.getElementById("nickname-save");
+const resumeButton = document.getElementById("resume-button");
+const changeDifficultyButton = document.getElementById("change-difficulty-button");
+const leaderboardList = document.getElementById("leaderboard-list");
+const currentScoreEl = document.getElementById("current-score");
+const nicknameKey = "sro_player_nickname";
+let nickname = "";
+try { nickname = localStorage.getItem(nicknameKey) || ""; } catch {}
+let gamePaused = false;
 let gameStarted = false;
 let activeTrafficCount = 0;
 
@@ -305,7 +319,7 @@ function makeCar(color = 0xe83d4d, modelType = 0, isPlayer = false) {
   return car;
 }
 
-const player = makeCar(0xe83d4d, 0, false);
+const player = makeCar(0xe83d4d, 0, true);
 player.position.set(0, 0, 4);
 scene.add(player);
 
@@ -337,19 +351,87 @@ for (let i = 0; i < 10; i++) {
   });
 }
 
-difficultyScreen.querySelectorAll("[data-traffic]").forEach(button => {
-  button.addEventListener("click", () => {
-    activeTrafficCount = Number(button.dataset.traffic);
-    trafficCars.forEach((traffic, index) => {
-      traffic.mesh.visible = index < activeTrafficCount;
-      traffic.z = -48 - index * (activeTrafficCount === 10 ? 25 : 42);
-      traffic.mesh.position.z = traffic.z;
-    });
-    gameStarted = true;
-    difficultyScreen.classList.add("hidden");
-    if (hintEl) hintEl.textContent = activeTrafficCount === 0 ? "VOLNÁ JÍZDA · BEZ PROVOZU" : "VYHÝBEJ SE PROVOZU A PŘEDJÍŽDĚJ";
+function applyDifficulty(trafficCount, resetRun = false) {
+  activeTrafficCount = trafficCount;
+  trafficCars.forEach((traffic, index) => {
+    traffic.mesh.visible = index < activeTrafficCount;
+    traffic.z = -48 - index * (activeTrafficCount === 10 ? 25 : 42);
+    traffic.mesh.position.z = traffic.z;
   });
+  if (resetRun) resetRace();
+  gameStarted = true;
+  gamePaused = false;
+  difficultyScreen.classList.add("hidden");
+  pauseScreen.classList.add("hidden");
+  if (hintEl) hintEl.textContent = activeTrafficCount === 0 ? "VOLNÁ JÍZDA · BEZ PROVOZU" : "VYHÝBEJ SE PROVOZU A PŘEDJÍŽDĚJ";
+}
+function showDifficulty() {
+  gamePaused = true;
+  speedKmh = 0;
+  pauseScreen.classList.add("hidden");
+  difficultyScreen.classList.remove("hidden");
+  difficultyStep.hidden = false;
+  nicknameStep.hidden = true;
+  gameStarted = false;
+}
+function scoreNow() { return Math.floor(travel) + overtakes * 100; }
+async function saveScore() {
+  if (!nickname || !gameStarted || scoreNow() <= 0) return;
+  try {
+    await fetch("/api/scores", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: nickname, score: scoreNow(), distance: Number((travel / 1000).toFixed(2)), overtakes }) });
+  } catch {}
+}
+async function loadLeaderboard() {
+  leaderboardList.innerHTML = "<li>Načítám výsledky…</li>";
+  try {
+    const response = await fetch("/api/scores");
+    const data = await response.json();
+    leaderboardList.innerHTML = "";
+    if (!data.scores?.length) { leaderboardList.innerHTML = "<li>Zatím tu nejsou žádné výsledky.</li>"; return; }
+    data.scores.slice(0, 10).forEach((entry, index) => {
+      const li = document.createElement("li");
+      const name = document.createElement("span"); name.textContent = (index + 1) + ". " + entry.name;
+      const score = document.createElement("strong"); score.textContent = Number(entry.score).toLocaleString("cs-CZ");
+      li.append(name, score); leaderboardList.append(li);
+    });
+  } catch { leaderboardList.innerHTML = "<li>Žebříček se nepodařilo načíst.</li>"; }
+}
+function openPause() {
+  if (!gameStarted || gamePaused) return;
+  gamePaused = true; speedKmh = 0;
+  document.getElementById("pause-player").textContent = nickname;
+  currentScoreEl.textContent = scoreNow().toLocaleString("cs-CZ");
+  pauseScreen.classList.remove("hidden");
+  saveScore().then(loadLeaderboard);
+}
+function closePause() { gamePaused = false; pauseScreen.classList.add("hidden"); }
+function resetRace() {
+  speedKmh = 0; laneX = 0; lateralVelocity = 0; travel = 0; overtakes = 0; collisionCooldown = 0;
+  if (overtakesEl) overtakesEl.textContent = "PŘEDJETÍ 0";
+  if (distanceEl) distanceEl.textContent = "JÍZDA 0.00 KM";
+  trafficCars.forEach((traffic, i) => {
+    traffic.z = -48 - i * (activeTrafficCount === 10 ? 25 : 42);
+    traffic.lane = trafficLanes[i % trafficLanes.length];
+    traffic.targetLane = traffic.lane;
+    traffic.laneTimer = 4 + Math.random() * 5;
+    traffic.mesh.visible = i < activeTrafficCount;
+  });
+}
+nicknameSave.addEventListener("click", () => {
+  const value = nicknameInput.value.trim().replace(/[^\p{L}\p{N}_ -]/gu, "").slice(0, 16);
+  if (value.length < 2) { nicknameInput.focus(); nicknameInput.setCustomValidity("Zadej alespoň 2 znaky."); nicknameInput.reportValidity(); return; }
+  nickname = value;
+  try { localStorage.setItem(nicknameKey, nickname); } catch {}
+  nicknameStep.hidden = true; difficultyStep.hidden = false;
 });
+nicknameInput.addEventListener("keydown", e => { if (e.key === "Enter") nicknameSave.click(); });
+if (nickname) { nicknameInput.value = nickname; nicknameStep.hidden = true; difficultyStep.hidden = false; }
+difficultyScreen.querySelectorAll("[data-traffic]").forEach(button => button.addEventListener("click", () => applyDifficulty(Number(button.dataset.traffic))));
+pauseButton.addEventListener("click", openPause);
+resumeButton.addEventListener("click", closePause);
+changeDifficultyButton.addEventListener("click", showDifficulty);
+document.getElementById("refresh-leaderboard").addEventListener("click", loadLeaderboard);
 
 // Detailed roadside buildings with road-facing windows, frames and entrance doors.
 const roadside = [];
@@ -588,23 +670,11 @@ bindHold("right", "right");
 bindHold("gas", "gas");
 bindHold("brake", "brake");
 addEventListener("keydown", e => {
-  keys.add(e.key.toLowerCase());
-  if (["arrowup", "arrowdown", "arrowleft", "arrowright", " "].includes(e.key.toLowerCase())) e.preventDefault();
-  if (e.key.toLowerCase() === "r") {
-    speedKmh = 0;
-    laneX = 0;
-    lateralVelocity = 0;
-    travel = 0;
-    overtakes = 0;
-    collisionCooldown = 0;
-    if (overtakesEl) overtakesEl.textContent = "PŘEDJETÍ 0";
-    trafficCars.forEach((traffic, i) => {
-      traffic.z = -48 - i * 25;
-      traffic.lane = trafficLanes[i % trafficLanes.length];
-      traffic.targetLane = traffic.lane;
-      traffic.laneTimer = 4 + Math.random() * 5;
-    });
-  }
+  const key = e.key.toLowerCase();
+  if (key === "escape" || key === "p") { e.preventDefault(); if (gamePaused) closePause(); else openPause(); return; }
+  keys.add(key);
+  if (["arrowup", "arrowdown", "arrowleft", "arrowright", " "].includes(key)) e.preventDefault();
+  if (key === "r" && gameStarted && !gamePaused) { saveScore(); resetRace(); }
 });
 addEventListener("keyup", e => keys.delete(e.key.toLowerCase()));
 
@@ -687,10 +757,10 @@ function animate(now) {
 
   const left = keys.has("arrowleft") || keys.has("a") || touch.left;
   const right = keys.has("arrowright") || keys.has("d") || touch.right;
-  const gas = keys.has("arrowup") || keys.has("w") || touch.gas;
-  const brake = keys.has("arrowdown") || keys.has("s") || touch.brake;
+  const gas = !gamePaused && (keys.has("arrowup") || keys.has("w") || touch.gas);
+  const brake = !gamePaused && (keys.has("arrowdown") || keys.has("s") || touch.brake);
 
-  if (!gameStarted) {
+  if (!gameStarted || gamePaused) {
     renderer.render(scene, camera);
     return;
   }
@@ -841,7 +911,7 @@ function animate(now) {
     lastRecordSave = now;
   }
   if (socket && socket.readyState === WebSocket.OPEN && now - lastSend > 70) {
-    socket.send(JSON.stringify({ type: "move", x: laneX, z: -16, progress: travel, rotation: player.rotation.y, speed: speedKmh / 220 }));
+    socket.send(JSON.stringify({ type: "move", name: nickname, x: laneX, z: -16, progress: travel, rotation: player.rotation.y, speed: speedKmh / 220 }));
     lastSend = now;
   }
 
@@ -855,5 +925,5 @@ addEventListener("resize", () => {
   renderer.setSize(innerWidth, innerHeight);
 });
 document.addEventListener("visibilitychange", () => {
-  if (document.hidden) speedKmh = 0;
+  if (document.hidden && gameStarted && !gamePaused) openPause();
 });
