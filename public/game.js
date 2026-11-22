@@ -8,6 +8,9 @@ const overtakesEl = document.getElementById("overtakes");
 const distanceEl = document.getElementById("distance");
 const bestDistanceEl = document.getElementById("best-distance");
 const hintEl = document.getElementById("hint");
+const difficultyScreen = document.getElementById("difficulty-screen");
+let gameStarted = false;
+let activeTrafficCount = 0;
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x91b6d0);
@@ -323,6 +326,7 @@ for (let i = 0; i < 10; i++) {
   car.scale.setScalar(0.84);
   car.position.set(roadCenter(48 + i * 25) + lane, 0, -48 - i * 25);
   scene.add(car);
+  car.visible = false;
   trafficCars.push({
     mesh: car,
     lane,
@@ -332,6 +336,20 @@ for (let i = 0; i < 10; i++) {
     laneTimer: 3 + Math.random() * 7
   });
 }
+
+difficultyScreen.querySelectorAll("[data-traffic]").forEach(button => {
+  button.addEventListener("click", () => {
+    activeTrafficCount = Number(button.dataset.traffic);
+    trafficCars.forEach((traffic, index) => {
+      traffic.mesh.visible = index < activeTrafficCount;
+      traffic.z = -48 - index * (activeTrafficCount === 10 ? 25 : 42);
+      traffic.mesh.position.z = traffic.z;
+    });
+    gameStarted = true;
+    difficultyScreen.classList.add("hidden");
+    if (hintEl) hintEl.textContent = activeTrafficCount === 0 ? "VOLNÁ JÍZDA · BEZ PROVOZU" : "VYHÝBEJ SE PROVOZU A PŘEDJÍŽDĚJ";
+  });
+});
 
 // Detailed roadside buildings with road-facing windows, frames and entrance doors.
 const roadside = [];
@@ -395,8 +413,8 @@ for (let i = 0; i < 34; i++) {
       const crownTop = new THREE.Mesh(new THREE.IcosahedronGeometry(0.82, 1), crownMat);
       crownTop.position.set(0.32, 3.35, 0.08);
       tree.add(crownTop);
-      tree.position.set(roadCenter(-z) + side * 18.8, 0, z + (side > 0 ? 2.2 : -2.2));
-      tree.userData.sideOffset = side * 18.8;
+      tree.position.set(roadCenter(-z) + side * 36, 0, z + (side > 0 ? 2.2 : -2.2));
+      tree.userData.sideOffset = side * 36;
       tree.traverse(part => { if (part.isMesh) part.castShadow = true; });
       scene.add(tree);
       roadside.push(tree);
@@ -672,6 +690,11 @@ function animate(now) {
   const gas = keys.has("arrowup") || keys.has("w") || touch.gas;
   const brake = keys.has("arrowdown") || keys.has("s") || touch.brake;
 
+  if (!gameStarted) {
+    renderer.render(scene, camera);
+    return;
+  }
+
   // Progressive acceleration, engine drag and stronger braking.
   const acceleration = 23 * (1 - speedKmh / 255);
   speedKmh += (gas ? acceleration : -(1.15 + speedKmh * 0.014)) * dt;
@@ -742,7 +765,7 @@ function animate(now) {
 
   // Traffic moves at its own speed. Faster driving closes the gap and allows overtaking.
   collisionCooldown = Math.max(0, collisionCooldown - dt);
-  trafficCars.forEach(traffic => {
+  trafficCars.slice(0, activeTrafficCount).forEach(traffic => {
     traffic.z += ((speedKmh - traffic.speed) / 3.6) * dt;
     if (traffic.z > 12) {
       overtakes += 1;
