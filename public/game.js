@@ -72,31 +72,94 @@ for (let z = 18; z > -290; z -= 12) {
   }
 }
 
-function makeCar(color = 0xe83d4d) {
+function makeCar(color = 0xe83d4d, modelType = 0) {
   const car = new THREE.Group();
-  const body = new THREE.Mesh(new THREE.BoxGeometry(1.75, 0.55, 3.35), mat(color, 0.35));
-  body.position.y = 0.62;
+  const models = [
+    { name: "sedan", width: 1.78, length: 3.65, cabinW: 1.42, cabinH: 0.62, cabinL: 1.85, cabinZ: -0.12, roofY: 1.15, wheelZ: 1.12, wheelX: 0.96 },
+    { name: "hatchback", width: 1.72, length: 3.25, cabinW: 1.42, cabinH: 0.68, cabinL: 1.78, cabinZ: -0.30, roofY: 1.17, wheelZ: 0.98, wheelX: 0.93 },
+    { name: "suv", width: 1.92, length: 3.75, cabinW: 1.58, cabinH: 0.82, cabinL: 1.95, cabinZ: -0.10, roofY: 1.32, wheelZ: 1.12, wheelX: 1.03 },
+    { name: "coupe", width: 1.82, length: 3.55, cabinW: 1.38, cabinH: 0.48, cabinL: 1.72, cabinZ: -0.18, roofY: 1.08, wheelZ: 1.08, wheelX: 0.98 },
+    { name: "van", width: 1.9, length: 3.6, cabinW: 1.62, cabinH: 0.92, cabinL: 2.25, cabinZ: -0.02, roofY: 1.38, wheelZ: 1.05, wheelX: 1.02 }
+  ];
+  const spec = models[Math.abs(modelType) % models.length];
+  const body = new THREE.Mesh(new THREE.BoxGeometry(spec.width, 0.58, spec.length), mat(color, 0.3));
+  body.position.y = 0.63;
   body.castShadow = true;
+  body.receiveShadow = true;
   car.add(body);
-  const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.35, 0.62, 1.65), mat(0x182635, 0.25));
-  cabin.position.set(0, 1.12, -0.18);
+
+  const cabin = new THREE.Mesh(new THREE.BoxGeometry(spec.cabinW, spec.cabinH, spec.cabinL), mat(0x182635, 0.24));
+  cabin.position.set(0, spec.roofY, spec.cabinZ);
   cabin.castShadow = true;
   car.add(cabin);
-  const glass = new THREE.Mesh(new THREE.BoxGeometry(1.22, 0.38, 0.08), mat(0x8bb4c9, 0.2));
-  glass.position.set(0, 1.15, 0.68);
-  car.add(glass);
-  for (const x of [-0.94, 0.94]) for (const z of [-1.05, 1.05]) {
-    const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.38, 0.22, 16), mat(0x101216));
+
+  const roof = new THREE.Mesh(new THREE.BoxGeometry(spec.cabinW * 0.94, 0.075, spec.cabinL * 0.66), mat(color, 0.32));
+  roof.position.set(0, spec.roofY + spec.cabinH * 0.48, spec.cabinZ - 0.02);
+  car.add(roof);
+
+  // Windscreen, rear glass and side windows give each body a recognisable car silhouette.
+  const glassMat = new THREE.MeshStandardMaterial({ color: 0x8bb4c9, roughness: 0.18, metalness: 0.18 });
+  const frontGlass = new THREE.Mesh(new THREE.BoxGeometry(spec.cabinW * 0.88, spec.cabinH * 0.38, 0.055), glassMat);
+  frontGlass.position.set(0, spec.roofY + 0.015, spec.cabinZ - spec.cabinL * 0.49);
+  frontGlass.rotation.x = -0.16;
+  car.add(frontGlass);
+  const rearGlass = new THREE.Mesh(new THREE.BoxGeometry(spec.cabinW * 0.84, spec.cabinH * 0.34, 0.05), glassMat);
+  rearGlass.position.set(0, spec.roofY, spec.cabinZ + spec.cabinL * 0.49);
+  rearGlass.rotation.x = 0.18;
+  car.add(rearGlass);
+  for (const side of [-1, 1]) {
+    const sideWindow = new THREE.Mesh(new THREE.BoxGeometry(0.045, spec.cabinH * 0.52, spec.cabinL * 0.72), glassMat);
+    sideWindow.position.set(side * (spec.cabinW / 2 + 0.012), spec.roofY + 0.015, spec.cabinZ);
+    car.add(sideWindow);
+  }
+
+  const wheelMat = mat(0x101216, 0.95);
+  const rimMat = mat(0x9ba4aa, 0.35);
+  for (const x of [-spec.wheelX, spec.wheelX]) for (const z of [-spec.wheelZ, spec.wheelZ]) {
+    const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.37, 0.37, 0.22, 16), wheelMat);
     wheel.rotation.z = Math.PI / 2;
-    wheel.position.set(x, 0.38, z);
+    wheel.position.set(x, 0.39, z);
     wheel.castShadow = true;
     car.add(wheel);
+    const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.19, 0.19, 0.235, 12), rimMat);
+    rim.rotation.z = Math.PI / 2;
+    rim.position.set(x * 1.005, 0.39, z);
+    car.add(rim);
   }
-  const lampMat = new THREE.MeshBasicMaterial({ color: 0xfff0c8 });
-  for (const x of [-0.57, 0.57]) {
-    const lamp = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.16, 0.05), lampMat);
-    lamp.position.set(x, 0.66, -1.7);
+
+  // Front bumper, grille and bright headlamps (the car faces toward -Z).
+  const bumperMat = mat(0x252a30, 0.45);
+  const frontBumper = new THREE.Mesh(new THREE.BoxGeometry(spec.width * 0.96, 0.17, 0.16), bumperMat);
+  frontBumper.position.set(0, 0.43, -spec.length / 2 - 0.015);
+  car.add(frontBumper);
+  const grille = new THREE.Mesh(new THREE.BoxGeometry(spec.width * 0.34, 0.16, 0.035), mat(0x10151a, 0.5));
+  grille.position.set(0, 0.62, -spec.length / 2 - 0.025);
+  car.add(grille);
+
+  const headHousing = mat(0x303943, 0.35);
+  const headLens = new THREE.MeshStandardMaterial({ color: 0xfff2cf, emissive: 0xffd77a, emissiveIntensity: 1.25, roughness: 0.18 });
+  const tailLens = new THREE.MeshStandardMaterial({ color: 0xff2638, emissive: 0xc90018, emissiveIntensity: 0.9, roughness: 0.2 });
+  for (const x of [-spec.width * 0.34, spec.width * 0.34]) {
+    const housing = new THREE.Mesh(new THREE.BoxGeometry(0.43, 0.19, 0.075), headHousing);
+    housing.position.set(x, 0.72, -spec.length / 2 - 0.035);
+    car.add(housing);
+    const lamp = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.115, 0.045), headLens);
+    lamp.position.set(x, 0.73, -spec.length / 2 - 0.08);
     car.add(lamp);
+
+    const tail = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.16, 0.06), tailLens);
+    tail.position.set(x, 0.72, spec.length / 2 + 0.045);
+    car.add(tail);
+  }
+  const rearBumper = new THREE.Mesh(new THREE.BoxGeometry(spec.width * 0.96, 0.16, 0.15), bumperMat);
+  rearBumper.position.set(0, 0.43, spec.length / 2 + 0.015);
+  car.add(rearBumper);
+
+  // Small mirrors break up the plain box shape.
+  for (const side of [-1, 1]) {
+    const mirror = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.12, 0.22), mat(color, 0.35));
+    mirror.position.set(side * (spec.width / 2 + 0.08), 1.0, -0.48);
+    car.add(mirror);
   }
   return car;
 }
@@ -118,7 +181,7 @@ if (bestDistanceEl) bestDistanceEl.textContent = "REKORD " + bestDistanceKm.toFi
 let lastRecordSave = 0;
 for (let i = 0; i < 6; i++) {
   const lane = trafficLanes[i % trafficLanes.length];
-  const car = makeCar([0x36a2ff, 0xf2b544, 0x9bd06a, 0xb7a2ff, 0xe7e7e7, 0xff884d][i]);
+  const car = makeCar([0x36a2ff, 0xf2b544, 0x9bd06a, 0xb7a2ff, 0xe7e7e7, 0xff884d][i], i);
   car.scale.setScalar(0.84);
   car.position.set(roadCenter(55 + i * 34) + lane, 0, -55 - i * 34);
   scene.add(car);
@@ -382,7 +445,7 @@ function remoteRelativeZ(p) {
 }
 function addRemote(p) {
   if (p.id === myId || remoteCars.has(p.id)) return;
-  const car = makeCar(0x36c7ff);
+  const car = makeCar(0x36c7ff, remoteCars.size + 1);
   const relativeZ = remoteRelativeZ(p);
   car.position.set(roadCenter(travel - relativeZ) + (p.x || 0), 0, relativeZ);
   car.userData.targetX = p.x || 0;
