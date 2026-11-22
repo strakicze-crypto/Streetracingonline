@@ -419,6 +419,7 @@ scene.add(player);
 const trafficCars = [];
 const trafficLanes = [-5, 0, 5];
 let overtakes = 0;
+let collectedPoints = 0;
 let collisionPenalties = 0;
 let collisionCooldown = 0;
 const bestDistanceKey = "sro_best_distance_km";
@@ -476,7 +477,7 @@ function showDifficulty() {
   nicknameStep.hidden = true;
   gameStarted = false;
 }
-function scoreNow() { return Math.max(0, Math.floor(travel) + overtakes * 100 - collisionPenalties); }
+function scoreNow() { return Math.max(0, collectedPoints - collisionPenalties); }
 async function saveScore() {
   if (!nickname || !gameStarted || scoreNow() <= 0) return;
   try {
@@ -509,7 +510,7 @@ function openPause() {
 }
 function closePause() { gamePaused = false; pauseScreen.classList.add("hidden"); }
 function resetRace() {
-  speedKmh = 0; laneX = 0; lateralVelocity = 0; travel = 0; overtakes = 0; collisionPenalties = 0; collisionCooldown = 0;
+  speedKmh = 0; laneX = 0; lateralVelocity = 0; travel = 0; overtakes = 0; collectedPoints = 0; collisionPenalties = 0; collisionCooldown = 0;
   if (driveScoreEl) driveScoreEl.textContent = "BODY 0";
   if (overtakesEl) overtakesEl.textContent = "PŘEDJETÍ 0";
   if (distanceEl) distanceEl.textContent = "JÍZDA 0.00 KM";
@@ -943,6 +944,7 @@ function animate(now) {
     traffic.z += ((speedKmh - traffic.speed) / 3.6) * dt;
     if (traffic.z > 12) {
       overtakes += 1;
+      collectedPoints += traffic.collisionLength > 8 ? 100 : 50;
       if (overtakesEl) overtakesEl.textContent = "PŘEDJETÍ " + overtakes;
       traffic.z = -220 - Math.random() * 80;
       if (activeTrafficCount === 5) {
