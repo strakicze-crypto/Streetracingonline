@@ -148,19 +148,19 @@ function animate(now) {
   steering = THREE.MathUtils.damp(steering, steerInput, 7, dt);
   x += steering * (2.3 + velocity * .075) * dt;
   x = THREE.MathUtils.clamp(x, -7.4, 7.4);
-  z -= velocity * dt * .42;
+  z -= velocity * dt * .62;
   player.position.x = THREE.MathUtils.damp(player.position.x, x, 12, dt);
   player.rotation.z = -steering * .12;
   player.rotation.y = -steering * .07;
   camera.position.x = THREE.MathUtils.damp(camera.position.x, x * .32, 2, dt);
   camera.lookAt(x * .22, .5, -8);
-  dashes.forEach(d => { d.position.z += velocity * dt * .42; if (d.position.z > 24) d.position.z -= 264; });
-  roadside.forEach(p => { p.position.z += velocity * dt * .42; if (p.position.z > 25) p.position.z -= 306; });
+  dashes.forEach(d => { d.position.z += velocity * dt * .62; if (d.position.z > 24) d.position.z -= 264; });
+  roadside.forEach(p => { p.position.z += velocity * dt * .62; if (p.position.z > 25) p.position.z -= 306; });
   remoteCars.forEach(car => {
     car.position.x = THREE.MathUtils.damp(car.position.x, car.userData.targetX, 8, dt);
     car.position.z = THREE.MathUtils.damp(car.position.z, car.userData.targetZ, 8, dt);
   });
-  speedEl.textContent = String(Math.round(velocity * 3.4)).padStart(3,"0");
+  speedEl.textContent = String(Math.round(velocity * 2.6)).padStart(3,"0");
   if (socket && socket.readyState === WebSocket.OPEN && now - lastSend > 70) {
     socket.send(JSON.stringify({type:"move",x,z,rotation:player.rotation.y,speed:velocity/54}));
     lastSend = now;
