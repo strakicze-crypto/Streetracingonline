@@ -5,6 +5,8 @@ const speedEl = document.getElementById("speed");
 const connectionEl = document.getElementById("connection");
 const playersEl = document.getElementById("players");
 const overtakesEl = document.getElementById("overtakes");
+const distanceEl = document.getElementById("distance");
+const bestDistanceEl = document.getElementById("best-distance");
 const hintEl = document.getElementById("hint");
 
 const scene = new THREE.Scene();
@@ -108,6 +110,11 @@ const trafficCars = [];
 const trafficLanes = [-5, 0, 5];
 let overtakes = 0;
 let collisionCooldown = 0;
+const bestDistanceKey = "sro_best_distance_km";
+let bestDistanceKm = 0;
+try { bestDistanceKm = Number(localStorage.getItem(bestDistanceKey)) || 0; } catch {}
+if (bestDistanceEl) bestDistanceEl.textContent = "REKORD " + bestDistanceKm.toFixed(2) + " KM";
+let lastRecordSave = 0;
 for (let i = 0; i < 6; i++) {
   const lane = trafficLanes[i % trafficLanes.length];
   const car = makeCar([0x36a2ff, 0xf2b544, 0x9bd06a, 0xb7a2ff, 0xe7e7e7, 0xff884d][i]);
@@ -174,7 +181,18 @@ bindHold("brake", "brake");
 addEventListener("keydown", e => {
   keys.add(e.key.toLowerCase());
   if (["arrowup", "arrowdown", "arrowleft", "arrowright", " "].includes(e.key.toLowerCase())) e.preventDefault();
-  if (e.key.toLowerCase() === "r") { speedKmh = 0; laneX = 0; }
+  if (e.key.toLowerCase() === "r") {
+    speedKmh = 0;
+    laneX = 0;
+    travel = 0;
+    overtakes = 0;
+    collisionCooldown = 0;
+    if (overtakesEl) overtakesEl.textContent = "PŘEDJETÍ 0";
+    trafficCars.forEach((traffic, i) => {
+      traffic.z = -55 - i * 34;
+      traffic.lane = trafficLanes[i % trafficLanes.length];
+    });
+  }
 });
 addEventListener("keyup", e => keys.delete(e.key.toLowerCase()));
 
@@ -348,6 +366,16 @@ function animate(now) {
   });
 
   speedEl.textContent = String(Math.round(speedKmh)).padStart(3, "0");
+  const distanceKm = travel / 1000;
+  if (distanceEl) distanceEl.textContent = "JÍZDA " + distanceKm.toFixed(2) + " KM";
+  if (distanceKm > bestDistanceKm) {
+    bestDistanceKm = distanceKm;
+    if (bestDistanceEl) bestDistanceEl.textContent = "REKORD " + bestDistanceKm.toFixed(2) + " KM";
+    if (now - lastRecordSave > 1000) {
+      try { localStorage.setItem(bestDistanceKey, String(bestDistanceKm)); } catch {}
+      lastRecordSave = now;
+    }
+  }
   if (socket && socket.readyState === WebSocket.OPEN && now - lastSend > 70) {
     socket.send(JSON.stringify({ type: "move", x: laneX, z: -16, rotation: player.rotation.y, speed: speedKmh / 220 }));
     lastSend = now;
