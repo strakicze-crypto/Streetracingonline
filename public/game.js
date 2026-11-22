@@ -261,12 +261,17 @@ let socket;
 function updateCount(n) {
   playersEl.textContent = Math.max(1, n) + " / 10 RIDERS";
 }
+function remoteRelativeZ(p) {
+  return Number.isFinite(Number(p.progress)) ? 4 + travel - Number(p.progress) : (p.z || -16);
+}
 function addRemote(p) {
   if (p.id === myId || remoteCars.has(p.id)) return;
   const car = makeCar(0x36c7ff);
-  car.position.set(roadCenter(travel - (p.z || -16)) + (p.x || 0), 0, p.z || -16);
+  const relativeZ = remoteRelativeZ(p);
+  car.position.set(roadCenter(travel - relativeZ) + (p.x || 0), 0, relativeZ);
   car.userData.targetX = p.x || 0;
-  car.userData.targetZ = p.z || -16;
+  car.userData.targetProgress = Number(p.progress) || 0;
+  car.userData.legacyZ = p.z || -16;
   scene.add(car);
   remoteCars.set(p.id, car);
 }
@@ -293,7 +298,8 @@ function connect() {
         const obj = remoteCars.get(p.id);
         if (obj) {
           obj.userData.targetX = p.x;
-          obj.userData.targetZ = p.z;
+          obj.userData.targetProgress = Number(p.progress) || 0;
+          obj.userData.legacyZ = p.z || -16;
           obj.rotation.y = p.rotation || 0;
         }
       }
@@ -412,9 +418,10 @@ function animate(now) {
   camera.lookAt(roadCenter(travel + 12) + laneX * 0.15, 0.65, -12);
 
   remoteCars.forEach(car => {
-    const tx = roadCenter(travel - car.userData.targetZ) + car.userData.targetX;
+    const targetZ = 4 + travel - car.userData.targetProgress;
+    const tx = roadCenter(travel - targetZ) + car.userData.targetX;
     car.position.x = THREE.MathUtils.damp(car.position.x, tx, 8, dt);
-    car.position.z = THREE.MathUtils.damp(car.position.z, car.userData.targetZ, 8, dt);
+    car.position.z = THREE.MathUtils.damp(car.position.z, targetZ, 8, dt);
   });
 
   speedEl.textContent = String(Math.round(speedKmh)).padStart(3, "0");
@@ -430,7 +437,7 @@ function animate(now) {
     lastRecordSave = now;
   }
   if (socket && socket.readyState === WebSocket.OPEN && now - lastSend > 70) {
-    socket.send(JSON.stringify({ type: "move", x: laneX, z: -16, rotation: player.rotation.y, speed: speedKmh / 220 }));
+    socket.send(JSON.stringify({ type: "move", x: laneX, z: -16, progress: travel, rotation: player.rotation.y, speed: speedKmh / 220 }));
     lastSend = now;
   }
 
