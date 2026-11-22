@@ -20,7 +20,9 @@ app.post("/api/scores", (req, res) => {
   const distance = Math.max(0, Math.min(100000, Number(req.body?.distance) || 0));
   const overtakes = Math.max(0, Math.min(100000, Math.floor(Number(req.body?.overtakes) || 0)));
   if (name.length < 2 || !Number.isFinite(score) || score < 1 || score > 100000000) return res.status(400).json({ error: "Invalid score" });
-  leaderboard.push({ name, score, distance, overtakes, at: Date.now() });
+  const existing = leaderboard.find(entry => entry.name.toLocaleLowerCase() === name.toLocaleLowerCase());
+  if (!existing) leaderboard.push({ name, score, distance, overtakes, at: Date.now() });
+  else if (score > existing.score) Object.assign(existing, { name, score, distance, overtakes, at: Date.now() });
   leaderboard.sort((a, b) => b.score - a.score || a.at - b.at);
   if (leaderboard.length > 100) leaderboard.length = 100;
   res.json({ ok: true, scores: leaderboard.slice(0, 10) });
@@ -54,7 +56,7 @@ wss.on("connection", (ws) => {
 
   const id = Math.random().toString(36).slice(2, 9);
   const color = ["#ff4d5a", "#36c7ff", "#ffc247", "#8e7bff", "#5ee0a0", "#ff8ed1"][players.size % 6];
-  const player = { id, name: "Racer " + (players.size + 1), x: (Math.random() - 0.5) * 5, z: -16, progress: 0, rotation: 0, color, name: "Racer " + (players.size + 1) };
+  const player = { id, x: (Math.random() - 0.5) * 5, z: -16, progress: 0, rotation: 0, color, name: "Racer " + (players.size + 1) };
   players.set(id, player);
 
   send(ws, { type: "welcome", id, players: Array.from(players.values()) });
