@@ -72,7 +72,7 @@ for (let z = 18; z > -290; z -= 12) {
   }
 }
 
-function makeCar(color = 0xe83d4d, modelType = 0) {
+function makeCar(color = 0xe83d4d, modelType = 0, isPlayer = false) {
   const car = new THREE.Group();
   const models = [
     { name: "sedan", width: 1.78, length: 3.65, cabinW: 1.42, cabinH: 0.62, cabinL: 1.85, cabinZ: -0.12, roofY: 1.15, wheelZ: 1.12, wheelX: 0.96 },
@@ -81,7 +81,11 @@ function makeCar(color = 0xe83d4d, modelType = 0) {
     { name: "coupe", width: 1.82, length: 3.55, cabinW: 1.38, cabinH: 0.48, cabinL: 1.72, cabinZ: -0.18, roofY: 1.08, wheelZ: 1.08, wheelX: 0.98 },
     { name: "van", width: 1.9, length: 3.6, cabinW: 1.62, cabinH: 0.92, cabinL: 2.25, cabinZ: -0.02, roofY: 1.38, wheelZ: 1.05, wheelX: 1.02 }
   ];
-  const spec = models[Math.abs(modelType) % models.length];
+  const spec = isPlayer ? {
+    name: "fiat-stilo-5door", width: 1.78, length: 3.75,
+    cabinW: 1.48, cabinH: 0.72, cabinL: 2.15, cabinZ: -0.22,
+    roofY: 1.2, wheelZ: 1.13, wheelX: 0.98
+  } : models[Math.abs(modelType) % models.length];
   const body = new THREE.Mesh(new THREE.BoxGeometry(spec.width, 0.58, spec.length), mat(color, 0.3));
   body.position.y = 0.63;
   body.castShadow = true;
@@ -108,9 +112,32 @@ function makeCar(color = 0xe83d4d, modelType = 0) {
   rearGlass.rotation.x = 0.18;
   car.add(rearGlass);
   for (const side of [-1, 1]) {
-    const sideWindow = new THREE.Mesh(new THREE.BoxGeometry(0.045, spec.cabinH * 0.52, spec.cabinL * 0.72), glassMat);
-    sideWindow.position.set(side * (spec.cabinW / 2 + 0.012), spec.roofY + 0.015, spec.cabinZ);
-    car.add(sideWindow);
+    if (isPlayer) {
+      // Stilo's five-door greenhouse: front, rear-door and rear-quarter glass.
+      const windowParts = [
+        { z: -0.77, length: 0.58, height: 0.48 },
+        { z: -0.08, length: 0.62, height: 0.48 },
+        { z: 0.65, length: 0.34, height: 0.42 }
+      ];
+      windowParts.forEach(part => {
+        const pane = new THREE.Mesh(new THREE.BoxGeometry(0.045, part.height, part.length), glassMat);
+        pane.position.set(side * (spec.cabinW / 2 + 0.014), spec.roofY + 0.02, part.z);
+        car.add(pane);
+      });
+      const seamMat = mat(0x737b82, 0.55);
+      for (const z of [-0.38, 0.43]) {
+        const seam = new THREE.Mesh(new THREE.BoxGeometry(0.025, 0.48, 0.025), seamMat);
+        seam.position.set(side * (spec.width / 2 + 0.012), 0.68, z);
+        car.add(seam);
+        const handle = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.055, 0.19), mat(0xdce0e3, 0.3));
+        handle.position.set(side * (spec.width / 2 + 0.035), 0.83, z - 0.12);
+        car.add(handle);
+      }
+    } else {
+      const sideWindow = new THREE.Mesh(new THREE.BoxGeometry(0.045, spec.cabinH * 0.52, spec.cabinL * 0.72), glassMat);
+      sideWindow.position.set(side * (spec.cabinW / 2 + 0.012), spec.roofY + 0.015, spec.cabinZ);
+      car.add(sideWindow);
+    }
   }
 
   const wheelMat = mat(0x101216, 0.95);
@@ -164,7 +191,7 @@ function makeCar(color = 0xe83d4d, modelType = 0) {
   return car;
 }
 
-const player = makeCar(0xe83d4d);
+const player = makeCar(0xb9c0c6, 0, true);
 player.position.set(0, 0, 4);
 scene.add(player);
 
