@@ -131,7 +131,8 @@ for (let i = 0; i < 6; i++) {
 }
 
 // Detailed roadside buildings with road-facing windows, frames and entrance doors.
-const roadside = [];\nconst pedestrians = [];
+const roadside = [];
+const pedestrians = [];
 const facadeMaterials = {
   frame: mat(0xd2c9b8),
   glass: new THREE.MeshStandardMaterial({ color: 0x426477, roughness: 0.22, metalness: 0.25 }),
