@@ -317,17 +317,19 @@ try { bestDistanceKm = Number(localStorage.getItem(bestDistanceKey)) || 0; } cat
 let savedBestDistanceKm = bestDistanceKm;
 if (bestDistanceEl) bestDistanceEl.textContent = "REKORD " + bestDistanceKm.toFixed(2) + " KM";
 let lastRecordSave = 0;
-for (let i = 0; i < 6; i++) {
+for (let i = 0; i < 10; i++) {
   const lane = trafficLanes[i % trafficLanes.length];
   const car = makeCar([0x36a2ff, 0xf2b544, 0x9bd06a, 0xb7a2ff, 0xe7e7e7, 0xff884d][i], i);
   car.scale.setScalar(0.84);
-  car.position.set(roadCenter(55 + i * 34) + lane, 0, -55 - i * 34);
+  car.position.set(roadCenter(48 + i * 25) + lane, 0, -48 - i * 25);
   scene.add(car);
   trafficCars.push({
     mesh: car,
     lane,
-    speed: 82 + Math.random() * 58,
-    z: -55 - i * 34
+    speed: 76 + Math.random() * 62,
+    z: -48 - i * 25,
+    targetLane: lane,
+    laneTimer: 3 + Math.random() * 7
   });
 }
 
@@ -378,6 +380,26 @@ for (let i = 0; i < 34; i++) {
         sill.position.set(facadeX + (side === -1 ? 0.08 : -0.08), y - 0.7, windowZ);
         buildingGroup.add(sill);
       }
+    }
+    // Street trees add a green buffer and break up repeated building facades.
+    if (i % 2 === 0) {
+      const tree = new THREE.Group();
+      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.22, 2.15, 7), mat(0x66503a));
+      trunk.position.y = 1.05;
+      tree.add(trunk);
+      const crownMat = mat([0x426448, 0x55764d, 0x647d50, 0x3d5c48][i % 4]);
+      const crown = new THREE.Mesh(new THREE.IcosahedronGeometry(1.25 + (i % 3) * 0.12, 1), crownMat);
+      crown.position.y = 2.65;
+      crown.scale.set(1, 1.18, 0.95);
+      tree.add(crown);
+      const crownTop = new THREE.Mesh(new THREE.IcosahedronGeometry(0.82, 1), crownMat);
+      crownTop.position.set(0.32, 3.35, 0.08);
+      tree.add(crownTop);
+      tree.position.set(roadCenter(-z) + side * 18.8, 0, z + (side > 0 ? 2.2 : -2.2));
+      tree.userData.sideOffset = side * 18.8;
+      tree.traverse(part => { if (part.isMesh) part.castShadow = true; });
+      scene.add(tree);
+      roadside.push(tree);
     }
     // A street-level entrance with a small canopy.
     const door = new THREE.Mesh(new THREE.BoxGeometry(0.16, 2.05, 1.05), facadeMaterials.door);
@@ -553,19 +575,23 @@ addEventListener("keydown", e => {
   if (e.key.toLowerCase() === "r") {
     speedKmh = 0;
     laneX = 0;
+    lateralVelocity = 0;
     travel = 0;
     overtakes = 0;
     collisionCooldown = 0;
     if (overtakesEl) overtakesEl.textContent = "PŘEDJETÍ 0";
     trafficCars.forEach((traffic, i) => {
-      traffic.z = -55 - i * 34;
+      traffic.z = -48 - i * 25;
       traffic.lane = trafficLanes[i % trafficLanes.length];
+      traffic.targetLane = traffic.lane;
+      traffic.laneTimer = 4 + Math.random() * 5;
     });
   }
 });
 addEventListener("keyup", e => keys.delete(e.key.toLowerCase()));
 
 let laneX = 0;
+let lateralVelocity = 0;
 let speedKmh = 0;
 let travel = 0;
 let steering = 0;
@@ -646,17 +672,22 @@ function animate(now) {
   const gas = keys.has("arrowup") || keys.has("w") || touch.gas;
   const brake = keys.has("arrowdown") || keys.has("s") || touch.brake;
 
-  // The speedometer and scenery now use the same real km/h conversion.
-  if (gas) speedKmh += 10.5 * dt;
-  else speedKmh -= 4.5 * dt;
-  if (brake) speedKmh -= 24 * dt;
+  // Progressive acceleration, engine drag and stronger braking.
+  const acceleration = 23 * (1 - speedKmh / 255);
+  speedKmh += (gas ? acceleration : -(1.15 + speedKmh * 0.014)) * dt;
+  if (brake) speedKmh -= (34 + speedKmh * 0.035) * dt;
   speedKmh = THREE.MathUtils.clamp(speedKmh, 0, 220);
 
   const steerInput = (right ? 1 : 0) - (left ? 1 : 0);
-  steering = THREE.MathUtils.damp(steering, steerInput, 6.5, dt);
-  const speedFactor = 0.35 + Math.min(speedKmh / 150, 1) * 0.65;
-  laneX += steering * (2.7 + speedKmh * 0.018) * dt;
-  laneX = THREE.MathUtils.clamp(laneX, -7.1, 7.1);
+  steering = THREE.MathUtils.damp(steering, steerInput, 8.5, dt);
+  const speedFactor = 0.3 + Math.min(speedKmh / 150, 1) * 0.7;
+  const desiredLateralVelocity = steering * (0.9 + speedKmh / 220 * 3.5);
+  lateralVelocity = THREE.MathUtils.damp(lateralVelocity, desiredLateralVelocity, 7.5, dt);
+  laneX += lateralVelocity * dt;
+  if (laneX < -7.1 || laneX > 7.1) {
+    laneX = THREE.MathUtils.clamp(laneX, -7.1, 7.1);
+    lateralVelocity *= -0.18;
+  }
 
   const metres = (speedKmh / 3.6) * dt;
   travel += metres;
@@ -716,14 +747,23 @@ function animate(now) {
     if (traffic.z > 12) {
       overtakes += 1;
       if (overtakesEl) overtakesEl.textContent = "PŘEDJETÍ " + overtakes;
-      traffic.z = -210 - Math.random() * 90;
-      const choices = trafficLanes.filter(lane => lane !== traffic.lane);
-      traffic.lane = choices[Math.floor(Math.random() * choices.length)];
-      traffic.speed = 82 + Math.random() * 58;
+      traffic.z = -220 - Math.random() * 80;
+      traffic.lane = traffic.targetLane;
+      traffic.targetLane = trafficLanes[Math.floor(Math.random() * trafficLanes.length)];
+      traffic.laneTimer = 4 + Math.random() * 7;
+      traffic.speed = 76 + Math.random() * 62;
     } else if (traffic.z < -300) {
       traffic.z = -75 - Math.random() * 150;
       traffic.lane = trafficLanes[Math.floor(Math.random() * trafficLanes.length)];
+      traffic.targetLane = traffic.lane;
+      traffic.laneTimer = 4 + Math.random() * 7;
     }
+    traffic.laneTimer -= dt;
+    if (traffic.laneTimer <= 0) {
+      traffic.targetLane = trafficLanes[Math.floor(Math.random() * trafficLanes.length)];
+      traffic.laneTimer = 5 + Math.random() * 8;
+    }
+    traffic.lane = THREE.MathUtils.damp(traffic.lane, traffic.targetLane, 0.8, dt);
     traffic.mesh.position.z = traffic.z;
     traffic.mesh.position.x = roadCenter(travel - traffic.z) + traffic.lane;
     traffic.mesh.rotation.y = -roadHeading(travel - traffic.z);
@@ -747,11 +787,16 @@ function animate(now) {
 
   const playerCenter = roadCenter(travel - 4);
   player.position.x = playerCenter + laneX;
-  player.rotation.z = -steering * 0.12 * speedFactor;
-  player.rotation.y = -roadHeading(travel - 4) - steering * 0.08;
-  // Keep the camera centered behind the player's actual lane, including at road edges.
-  camera.position.x = THREE.MathUtils.damp(camera.position.x, player.position.x, 5.5, dt);
-  camera.lookAt(roadCenter(travel + 12) + laneX * 0.78, 0.65, -12);
+  player.rotation.z = -steering * 0.105 * speedFactor - lateralVelocity * 0.012;
+  player.rotation.y = -roadHeading(travel - 4) - steering * 0.075;
+  player.position.y = Math.sin(now * 0.012) * (speedKmh / 220) * 0.012;
+  // Dynamic chase camera and wider field of view sell acceleration and speed.
+  camera.position.x = THREE.MathUtils.damp(camera.position.x, player.position.x - steering * 0.35, 4.2, dt);
+  camera.position.y = 5.8 + Math.min(speedKmh / 220, 1) * 0.35 + Math.sin(now * 0.018) * (speedKmh / 220) * 0.025;
+  camera.position.z = THREE.MathUtils.damp(camera.position.z, 12 + speedKmh / 220 * 1.2, 2.5, dt);
+  camera.fov = THREE.MathUtils.damp(camera.fov, 66 + speedKmh / 220 * 12, 2.8, dt);
+  camera.updateProjectionMatrix();
+  camera.lookAt(roadCenter(travel + 18) + laneX * 0.72, 0.72, -15);
 
   remoteCars.forEach(car => {
     const targetZ = 4 + travel - car.userData.targetProgress;
