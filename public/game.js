@@ -71,7 +71,7 @@ for (let i = 0; i < 34; i++) {
     const w = 3 + Math.random() * 5, h = 5 + Math.random() * 18;
     const building = new THREE.Mesh(new THREE.BoxGeometry(w, h, 5 + Math.random() * 4), mat([0x78818c,0x9a9b98,0x687987,0xb0a79c][i % 4]));
     building.position.set(side * (15 + Math.random() * 12), h / 2 - .05, z);
-    building.castShadow = true; building.receiveShadow = true; scene.add(building);
+    building.castShadow = true; building.receiveShadow = true; scene.add(building); roadside.push(building);
     const pole = new THREE.Group();
     const stem = new THREE.Mesh(new THREE.CylinderGeometry(.07,.1,5,8), mat(0x333a43));
     stem.position.y = 2.5; pole.add(stem);
@@ -148,14 +148,14 @@ function animate(now) {
   steering = THREE.MathUtils.damp(steering, steerInput, 7, dt);
   x += steering * (2.3 + velocity * .075) * dt;
   x = THREE.MathUtils.clamp(x, -7.4, 7.4);
-  z -= velocity * dt * .62;
+  z -= velocity * dt * 1.25;
   player.position.x = THREE.MathUtils.damp(player.position.x, x, 12, dt);
   player.rotation.z = -steering * .12;
   player.rotation.y = -steering * .07;
   camera.position.x = THREE.MathUtils.damp(camera.position.x, x * .32, 2, dt);
   camera.lookAt(x * .22, .5, -8);
-  dashes.forEach(d => { d.position.z += velocity * dt * .62; if (d.position.z > 24) d.position.z -= 264; });
-  roadside.forEach(p => { p.position.z += velocity * dt * .62; if (p.position.z > 25) p.position.z -= 306; });
+  dashes.forEach(d => { d.position.z += velocity * dt * 1.25; if (d.position.z > 24) d.position.z -= 264; });
+  roadside.forEach(p => { p.position.z += velocity * dt * 1.25; if (p.position.z > 25) p.position.z -= 306; });
   remoteCars.forEach(car => {
     car.position.x = THREE.MathUtils.damp(car.position.x, car.userData.targetX, 8, dt);
     car.position.z = THREE.MathUtils.damp(car.position.z, car.userData.targetZ, 8, dt);
