@@ -419,6 +419,7 @@ function resetRace() {
   });
 }
 nicknameSave.addEventListener("click", () => {
+  nicknameInput.setCustomValidity("");
   const value = nicknameInput.value.trim().replace(/[^\p{L}\p{N}_ -]/gu, "").slice(0, 16);
   if (value.length < 2) { nicknameInput.focus(); nicknameInput.setCustomValidity("Zadej alespoň 2 znaky."); nicknameInput.reportValidity(); return; }
   nickname = value;
