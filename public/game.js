@@ -229,6 +229,12 @@ for (let i = 0; i < 34; i++) {
       const head = new THREE.Mesh(new THREE.SphereGeometry(0.19, 10, 8), skin);
       head.position.y = 1.62;
       person.add(head);
+      const hair = new THREE.Mesh(new THREE.SphereGeometry(0.195, 10, 7, 0, Math.PI * 2, 0, Math.PI * 0.48), mat(0x30251f));
+      hair.position.set(0, 1.69, 0);
+      person.add(hair);
+      const backpack = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.44, 0.18), mat(0x9b6840));
+      backpack.position.set(0, 1.2, -0.2);
+      person.add(backpack);
       const leftLeg = new THREE.Group();
       leftLeg.position.set(-0.12, 0.78, 0);
       const legA = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.62, 0.16), mat(0x30343b));
@@ -313,6 +319,13 @@ for (let i = 0; i < 34; i++) {
     const bulb = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.13, 0.28), new THREE.MeshStandardMaterial({ color: 0xffe5ad, emissive: 0x80602c, emissiveIntensity: 0.35 }));
     bulb.position.set(-side * 1.0, 5.0, 0);
     pole.add(bulb);
+    const shade = new THREE.Mesh(new THREE.BoxGeometry(0.58, 0.12, 0.4), metal);
+    shade.position.set(-side * 1.0, 5.12, 0);
+    pole.add(shade);
+    const glow = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.58, 0.025, 16), new THREE.MeshBasicMaterial({ color: 0xffd88a, transparent: true, opacity: 0.22 }));
+    glow.rotation.x = -Math.PI / 2;
+    glow.position.set(-side * 1.0, 0.075, 0);
+    pole.add(glow);
     pole.position.set(roadCenter(-z) + side * 11, 0, z);
     pole.userData.sideOffset = side * 11;
     scene.add(pole);
