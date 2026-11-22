@@ -344,6 +344,7 @@ for (let i = 0; i < 10; i++) {
   trafficCars.push({
     mesh: car,
     lane,
+    fixedLane: lane,
     speed: 76 + Math.random() * 62,
     z: -48 - i * 25,
     targetLane: lane,
@@ -354,6 +355,10 @@ for (let i = 0; i < 10; i++) {
 function applyDifficulty(trafficCount, resetRun = false) {
   activeTrafficCount = trafficCount;
   trafficCars.forEach((traffic, index) => {
+    if (activeTrafficCount === 5 && index < 5) {
+      traffic.lane = traffic.fixedLane;
+      traffic.targetLane = traffic.fixedLane;
+    }
     traffic.mesh.visible = index < activeTrafficCount;
     traffic.z = -48 - index * (activeTrafficCount === 10 ? 25 : 42);
     traffic.mesh.position.z = traffic.z;
@@ -412,7 +417,7 @@ function resetRace() {
   if (distanceEl) distanceEl.textContent = "JÍZDA 0.00 KM";
   trafficCars.forEach((traffic, i) => {
     traffic.z = -48 - i * (activeTrafficCount === 10 ? 25 : 42);
-    traffic.lane = trafficLanes[i % trafficLanes.length];
+    traffic.lane = activeTrafficCount === 5 && i < 5 ? traffic.fixedLane : trafficLanes[i % trafficLanes.length];
     traffic.targetLane = traffic.lane;
     traffic.laneTimer = 4 + Math.random() * 5;
     traffic.mesh.visible = i < activeTrafficCount;
@@ -842,22 +847,37 @@ function animate(now) {
       overtakes += 1;
       if (overtakesEl) overtakesEl.textContent = "PŘEDJETÍ " + overtakes;
       traffic.z = -220 - Math.random() * 80;
-      traffic.lane = traffic.targetLane;
-      traffic.targetLane = trafficLanes[Math.floor(Math.random() * trafficLanes.length)];
+      if (activeTrafficCount === 5) {
+        traffic.lane = traffic.fixedLane;
+        traffic.targetLane = traffic.fixedLane;
+      } else {
+        traffic.lane = traffic.targetLane;
+        traffic.targetLane = trafficLanes[Math.floor(Math.random() * trafficLanes.length)];
+      }
       traffic.laneTimer = 4 + Math.random() * 7;
       traffic.speed = 76 + Math.random() * 62;
     } else if (traffic.z < -300) {
       traffic.z = -75 - Math.random() * 150;
-      traffic.lane = trafficLanes[Math.floor(Math.random() * trafficLanes.length)];
-      traffic.targetLane = traffic.lane;
+      if (activeTrafficCount === 5) {
+        traffic.lane = traffic.fixedLane;
+        traffic.targetLane = traffic.fixedLane;
+      } else {
+        traffic.lane = trafficLanes[Math.floor(Math.random() * trafficLanes.length)];
+        traffic.targetLane = traffic.lane;
+      }
       traffic.laneTimer = 4 + Math.random() * 7;
     }
-    traffic.laneTimer -= dt;
-    if (traffic.laneTimer <= 0) {
-      traffic.targetLane = trafficLanes[Math.floor(Math.random() * trafficLanes.length)];
-      traffic.laneTimer = 5 + Math.random() * 8;
+    if (activeTrafficCount !== 5) {
+      traffic.laneTimer -= dt;
+      if (traffic.laneTimer <= 0) {
+        traffic.targetLane = trafficLanes[Math.floor(Math.random() * trafficLanes.length)];
+        traffic.laneTimer = 5 + Math.random() * 8;
+      }
+      traffic.lane = THREE.MathUtils.damp(traffic.lane, traffic.targetLane, 0.8, dt);
+    } else {
+      traffic.lane = traffic.fixedLane;
+      traffic.targetLane = traffic.fixedLane;
     }
-    traffic.lane = THREE.MathUtils.damp(traffic.lane, traffic.targetLane, 0.8, dt);
     traffic.mesh.position.z = traffic.z;
     traffic.mesh.position.x = roadCenter(travel - traffic.z) + traffic.lane;
     traffic.mesh.rotation.y = -roadHeading(travel - traffic.z);
