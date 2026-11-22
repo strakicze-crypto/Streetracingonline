@@ -204,6 +204,94 @@ function makeCar(color = 0xe83d4d, modelType = 0, isPlayer = false) {
   const rearBumper = new THREE.Mesh(new THREE.BoxGeometry(spec.width * 0.96, 0.16, 0.15), bumperMat);
   rearBumper.position.set(0, 0.43, spec.length / 2 + 0.015);
   car.add(rearBumper);
+  if (isPlayer) {
+    // Fiat Stilo 5-door details: tall rear lamps, rounded wheel arches,
+    // two visible door cuts, front Fiat badge and the wide lower intake.
+    const archMat = mat(0x8b949b, 0.55);
+    for (const x of [-spec.wheelX, spec.wheelX]) {
+      for (const z of [-spec.wheelZ, spec.wheelZ]) {
+        const arch = new THREE.Mesh(new THREE.TorusGeometry(0.435, 0.045, 8, 28), archMat);
+        arch.rotation.y = Math.PI / 2;
+        arch.position.set(x * 0.93, 0.48, z);
+        car.add(arch);
+      }
+    }
+
+    // Side rub strips and door outlines make the five-door layout legible.
+    const trimMat = mat(0x777f86, 0.5);
+    for (const side of [-1, 1]) {
+      const rubbingStrip = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.095, 2.55), trimMat);
+      rubbingStrip.position.set(side * 0.895, 0.68, 0.02);
+      car.add(rubbingStrip);
+      for (const z of [-0.34, 0.52]) {
+        const doorCut = new THREE.Mesh(new THREE.BoxGeometry(0.018, 0.53, 0.018), mat(0x59636b, 0.6));
+        doorCut.position.set(side * 0.905, 0.91, z);
+        car.add(doorCut);
+      }
+      const handle = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.065, 0.22), mat(0xdce1e5, 0.28));
+      handle.position.set(side * 0.925, 1.02, 0.34);
+      car.add(handle);
+      const rearHandle = handle.clone();
+      rearHandle.position.z = 1.12;
+      car.add(rearHandle);
+      const mirrorBase = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.13, 0.19), mat(0x343b42, 0.4));
+      mirrorBase.position.set(side * 0.94, 1.28, -0.94);
+      car.add(mirrorBase);
+    }
+
+    // Stilo's tall, swept headlamp units and lower bumper fog lamps.
+    const headShape = new THREE.Shape();
+    headShape.moveTo(-0.28, -0.10);
+    headShape.lineTo(0.22, -0.07);
+    headShape.lineTo(0.34, 0.04);
+    headShape.lineTo(0.25, 0.18);
+    headShape.lineTo(-0.20, 0.16);
+    headShape.lineTo(-0.34, 0.05);
+    headShape.closePath();
+    for (const side of [-1, 1]) {
+      const head = new THREE.Mesh(new THREE.ShapeGeometry(headShape), new THREE.MeshStandardMaterial({
+        color: 0xf6f2df, emissive: 0x6e6850, emissiveIntensity: 0.32,
+        roughness: 0.18, side: THREE.DoubleSide
+      }));
+      head.position.set(side * 0.55, 0.86, -1.91);
+      car.add(head);
+      const fog = new THREE.Mesh(new THREE.CircleGeometry(0.085, 16), new THREE.MeshStandardMaterial({
+        color: 0xfff0c4, emissive: 0x66552c, emissiveIntensity: 0.35
+      }));
+      fog.position.set(side * 0.62, 0.48, -1.965);
+      car.add(fog);
+
+      // Tall red rear light clusters at the outer edges of the hatch.
+      const rearLight = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.62, 0.075), new THREE.MeshStandardMaterial({
+        color: 0xe62935, emissive: 0x79000b, emissiveIntensity: 0.55, roughness: 0.22
+      }));
+      rearLight.position.set(side * 0.72, 0.99, 1.91);
+      car.add(rearLight);
+      const reverse = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.13, 0.025), mat(0xe8e8df, 0.25));
+      reverse.position.set(side * 0.72, 0.78, 1.96);
+      car.add(reverse);
+    }
+
+    const lowerIntake = new THREE.Mesh(new THREE.BoxGeometry(0.78, 0.16, 0.045), mat(0x171c20, 0.6));
+    lowerIntake.position.set(0, 0.49, -1.965);
+    car.add(lowerIntake);
+    const badgeRing = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 0.035, 24), mat(0x9d1824, 0.3));
+    badgeRing.rotation.x = Math.PI / 2;
+    badgeRing.position.set(0, 0.73, -1.98);
+    car.add(badgeRing);
+    const badgeCenter = new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.085, 0.04, 24), mat(0xd9dce0, 0.25));
+    badgeCenter.rotation.x = Math.PI / 2;
+    badgeCenter.position.set(0, 0.73, -2.005);
+    car.add(badgeCenter);
+
+    // Rear hatch handle and number plate.
+    const hatchHandle = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.055, 0.035), mat(0x343b42, 0.45));
+    hatchHandle.position.set(0, 0.88, 1.965);
+    car.add(hatchHandle);
+    const plate = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.16, 0.025), mat(0xe6e8e8, 0.45));
+    plate.position.set(0, 0.58, 1.98);
+    car.add(plate);
+  }
 
   // Small mirrors break up the plain box shape.
   for (const side of [-1, 1]) {
