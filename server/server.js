@@ -35,9 +35,12 @@ wss.on("connection", (ws) => {
     return;
   }
 
+  ws.isAlive = true;
+  ws.on("pong", () => { ws.isAlive = true; });
+
   const id = Math.random().toString(36).slice(2, 9);
   const color = ["#ff4d5a", "#36c7ff", "#ffc247", "#8e7bff", "#5ee0a0", "#ff8ed1"][players.size % 6];
-  const player = { id, x: (Math.random() - 0.5) * 5, z: -8 - players.size * 5, rotation: 0, color, name: "Racer " + (players.size + 1) };
+  const player = { id, x: (Math.random() - 0.5) * 5, z: -16, progress: 0, rotation: 0, color, name: "Racer " + (players.size + 1) };
   players.set(id, player);
 
   send(ws, { type: "welcome", id, players: Array.from(players.values()) });
@@ -52,6 +55,7 @@ wss.on("connection", (ws) => {
     if (!current) return;
     current.x = Math.max(-7, Math.min(7, Number(data.x) || 0));
     current.z = Number(data.z) || 0;
+    current.progress = Math.max(0, Number(data.progress) || 0);
     current.rotation = Number(data.rotation) || 0;
     current.speed = Math.max(0, Math.min(1, Number(data.speed) || 0));
     broadcast({ type: "move", player: current }, ws);
@@ -63,6 +67,19 @@ wss.on("connection", (ws) => {
     broadcast({ type: "count", count: players.size });
   });
 });
+
+// Detect abandoned mobile connections so ghost racers do not stay in the room.
+const heartbeat = setInterval(() => {
+  for (const ws of wss.clients) {
+    if (ws.isAlive === false) {
+      ws.terminate();
+      continue;
+    }
+    ws.isAlive = false;
+    ws.ping();
+  }
+}, 15000);
+wss.on("close", () => clearInterval(heartbeat));
 
 server.listen(PORT, "0.0.0.0", () => {
   console.log("Street Racing Online listening on " + PORT);
