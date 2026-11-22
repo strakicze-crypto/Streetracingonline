@@ -113,6 +113,7 @@ let collisionCooldown = 0;
 const bestDistanceKey = "sro_best_distance_km";
 let bestDistanceKm = 0;
 try { bestDistanceKm = Number(localStorage.getItem(bestDistanceKey)) || 0; } catch {}
+let savedBestDistanceKm = bestDistanceKm;
 if (bestDistanceEl) bestDistanceEl.textContent = "REKORD " + bestDistanceKm.toFixed(2) + " KM";
 let lastRecordSave = 0;
 for (let i = 0; i < 6; i++) {
@@ -371,10 +372,11 @@ function animate(now) {
   if (distanceKm > bestDistanceKm) {
     bestDistanceKm = distanceKm;
     if (bestDistanceEl) bestDistanceEl.textContent = "REKORD " + bestDistanceKm.toFixed(2) + " KM";
-    if (now - lastRecordSave > 1000) {
-      try { localStorage.setItem(bestDistanceKey, String(bestDistanceKm)); } catch {}
-      lastRecordSave = now;
-    }
+  }
+  if (bestDistanceKm > savedBestDistanceKm && now - lastRecordSave > 1000) {
+    try { localStorage.setItem(bestDistanceKey, String(bestDistanceKm)); } catch {}
+    savedBestDistanceKm = bestDistanceKm;
+    lastRecordSave = now;
   }
   if (socket && socket.readyState === WebSocket.OPEN && now - lastSend > 70) {
     socket.send(JSON.stringify({ type: "move", x: laneX, z: -16, rotation: player.rotation.y, speed: speedKmh / 220 }));
