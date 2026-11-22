@@ -413,9 +413,9 @@ function animate(now) {
   player.position.x = playerCenter + laneX;
   player.rotation.z = -steering * 0.12 * speedFactor;
   player.rotation.y = -roadHeading(travel - 4) - steering * 0.08;
-  const cameraCenter = roadCenter(travel - 12);
-  camera.position.x = THREE.MathUtils.damp(camera.position.x, cameraCenter + laneX * 0.28, 3.5, dt);
-  camera.lookAt(roadCenter(travel + 12) + laneX * 0.15, 0.65, -12);
+  // Keep the camera centered behind the player's actual lane, including at road edges.
+  camera.position.x = THREE.MathUtils.damp(camera.position.x, player.position.x, 5.5, dt);
+  camera.lookAt(roadCenter(travel + 12) + laneX * 0.78, 0.65, -12);
 
   remoteCars.forEach(car => {
     const targetZ = 4 + travel - car.userData.targetProgress;
