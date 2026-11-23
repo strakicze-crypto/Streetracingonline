@@ -219,6 +219,19 @@ function makeCar(color = 0xe83d4d, modelType = 0, isPlayer = false) {
     tail.position.set(x, 0.72, spec.length / 2 + 0.045);
     car.add(tail);
   }
+  // Amber front and rear turn signals.
+  const indicatorMaterials = { left: [], right: [] };
+  for (const side of [-1, 1]) {
+    for (const z of [-spec.length / 2 - 0.09, spec.length / 2 + 0.09]) {
+      const lensMat = new THREE.MeshStandardMaterial({ color: 0xffa21a, emissive: 0xff8500, emissiveIntensity: 0, roughness: 0.22 });
+      const lens = new THREE.Mesh(new THREE.BoxGeometry(0.19, 0.105, 0.055), lensMat);
+      lens.position.set(side * spec.width * 0.39, 0.77, z);
+      car.add(lens);
+      indicatorMaterials[side < 0 ? "left" : "right"].push(lensMat);
+    }
+  }
+  car.userData.indicators = indicatorMaterials;
+
   const rearBumper = new THREE.Mesh(new THREE.BoxGeometry(spec.width * 0.96, 0.16, 0.15), bumperMat);
   rearBumper.position.set(0, 0.43, spec.length / 2 + 0.015);
   car.add(rearBumper);
@@ -320,6 +333,16 @@ function makeCar(color = 0xe83d4d, modelType = 0, isPlayer = false) {
   return car;
 }
 
+function updateIndicators(vehicle, side, now) {
+  const indicators = vehicle.userData.indicators;
+  if (!indicators) return;
+  const flashing = side !== 0 && (Math.floor(now / 420) % 2 === 0);
+  for (const key of ["left", "right"]) {
+    const intensity = key === (side < 0 ? "left" : "right") && flashing ? 2.8 : 0;
+    indicators[key].forEach(material => { material.emissiveIntensity = intensity; });
+  }
+}
+
 function makeTruck(color = 0xd9d9d9) {
   const truck = new THREE.Group();
   const paint = new THREE.MeshStandardMaterial({ color, roughness: 0.62, metalness: 0.12 });
@@ -392,6 +415,22 @@ function makeTruck(color = 0xd9d9d9) {
     tail.position.set(x * 1.18, 1.12, 5.72);
     truck.add(tail);
   }
+
+  // Amber indicators on both front corners and rear trailer corners.
+  const indicatorMaterials = { left: [], right: [] };
+  for (const side of [-1, 1]) {
+    const frontMat = new THREE.MeshStandardMaterial({ color: 0xffa21a, emissive: 0xff8500, emissiveIntensity: 0, roughness: 0.22 });
+    const front = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.16, 0.07), frontMat);
+    front.position.set(side * 1.05, 1.08, -4.72);
+    truck.add(front);
+    indicatorMaterials[side < 0 ? "left" : "right"].push(frontMat);
+    const rearMat = new THREE.MeshStandardMaterial({ color: 0xffa21a, emissive: 0xff8500, emissiveIntensity: 0, roughness: 0.22 });
+    const rear = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.28, 0.07), rearMat);
+    rear.position.set(side * 1.08, 1.12, 5.78);
+    truck.add(rear);
+    indicatorMaterials[side < 0 ? "left" : "right"].push(rearMat);
+  }
+  truck.userData.indicators = indicatorMaterials;
 
   // Three axles on the tractor/trailer combination.
   for (const z of [-3.75, 2.95, 4.65]) {
@@ -970,7 +1009,8 @@ function animate(now) {
     if (activeTrafficCount !== 5) {
       traffic.laneTimer -= dt;
       if (traffic.laneTimer <= 0) {
-        traffic.targetLane = trafficLanes[Math.floor(Math.random() * trafficLanes.length)];
+        const possibleLanes = trafficLanes.filter(lane => lane !== traffic.lane);
+        traffic.targetLane = possibleLanes[Math.floor(Math.random() * possibleLanes.length)];
         traffic.laneTimer = 5 + Math.random() * 8;
       }
       traffic.lane = THREE.MathUtils.damp(traffic.lane, traffic.targetLane, 0.8, dt);
@@ -978,6 +1018,8 @@ function animate(now) {
       traffic.lane = traffic.fixedLane;
       traffic.targetLane = traffic.fixedLane;
     }
+    const laneChangeDirection = traffic.targetLane - traffic.lane;
+    updateIndicators(traffic.mesh, Math.abs(laneChangeDirection) > 0.22 ? Math.sign(laneChangeDirection) : 0, now);
     traffic.mesh.position.z = traffic.z;
     traffic.mesh.position.x = roadCenter(travel - traffic.z) + traffic.lane;
     traffic.mesh.rotation.y = -roadHeading(travel - traffic.z);
@@ -1024,6 +1066,7 @@ function animate(now) {
   player.position.x = playerCenter + laneX;
   player.rotation.z = -steering * 0.105 * speedFactor - lateralVelocity * 0.012;
   player.rotation.y = -roadHeading(travel - 4) - steering * 0.075;
+  updateIndicators(player, Math.abs(steering) > 0.18 ? Math.sign(steering) : 0, now);
   player.position.y = Math.sin(now * 0.012) * (speedKmh / 220) * 0.012;
   // Dynamic chase camera and wider field of view sell acceleration and speed.
   camera.position.x = THREE.MathUtils.damp(camera.position.x, player.position.x - steering * 0.35, 4.2, dt);
