@@ -465,13 +465,37 @@ async function loadPlayerModel() {
     const loader = new ColladaLoader();
     const collada = await new Promise((resolve, reject) => loader.load('./assets/model.dae', resolve, undefined, reject));
     const model = collada.scene;
+
+    // SketchUp exports can include an enormous construction/floor plane.
+    // Remove oversized meshes before measuring the actual vehicle.
+    model.updateMatrixWorld(true);
+    const oversized = [];
+    model.traverse(object => {
+      if (!object.isMesh || !object.geometry) return;
+      if (!object.geometry.boundingBox) object.geometry.computeBoundingBox();
+      const box = object.geometry.boundingBox.clone().applyMatrix4(object.matrixWorld);
+      const dimensions = box.getSize(new THREE.Vector3());
+      if (Math.max(dimensions.x, dimensions.y, dimensions.z) > 12) oversized.push(object);
+    });
+    oversized.forEach(object => {
+      if (object.parent) object.parent.remove(object);
+    });
+
     model.updateMatrixWorld(true);
     let bounds = new THREE.Box3().setFromObject(model);
     let size = bounds.getSize(new THREE.Vector3());
-    if (size.x > size.z) model.rotation.y = Math.PI / 2;
-    model.updateMatrixWorld(true);
-    bounds = new THREE.Box3().setFromObject(model);
-    size = bounds.getSize(new THREE.Vector3());
+    if (!Number.isFinite(size.x + size.y + size.z) || Math.max(size.x, size.y, size.z) < 0.01) {
+      throw new Error('The COLLADA model has no usable vehicle geometry.');
+    }
+
+    // The longest horizontal axis is the car's length; the game uses Z for length.
+    if (size.x > size.z) {
+      model.rotation.y = Math.PI / 2;
+      model.updateMatrixWorld(true);
+      bounds = new THREE.Box3().setFromObject(model);
+      size = bounds.getSize(new THREE.Vector3());
+    }
+
     const scale = Math.min(1.78 / Math.max(size.x, 0.001), 3.75 / Math.max(size.z, 0.001), 1.65 / Math.max(size.y, 0.001));
     model.scale.setScalar(scale);
     model.updateMatrixWorld(true);
@@ -480,6 +504,7 @@ async function loadPlayerModel() {
     model.position.x -= center.x;
     model.position.z -= center.z;
     model.position.y -= bounds.min.y;
+
     model.traverse(object => {
       if (object.isMesh) {
         object.castShadow = true;
@@ -492,6 +517,7 @@ async function loadPlayerModel() {
     });
     player.remove(fallbackPlayer);
     player.add(model);
+
     const indicatorMaterials = { left: [], right: [] };
     for (const side of [-1, 1]) {
       for (const z of [-1.72, 1.72]) {
@@ -503,7 +529,7 @@ async function loadPlayerModel() {
       }
     }
     player.userData.indicators = indicatorMaterials;
-    console.info('Fiat Stilo model loaded', size);
+    console.info('Fiat Stilo model loaded; removed oversized meshes:', oversized.length, 'vehicle size:', size);
   } catch (error) {
     console.warn('Fiat Stilo model could not be loaded; using the red fallback car.', error);
   }
