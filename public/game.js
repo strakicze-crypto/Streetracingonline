@@ -496,14 +496,11 @@ async function loadPlayerModel() {
       size = bounds.getSize(new THREE.Vector3());
     }
 
-    // The supplied model faces the opposite direction from the game's traffic.
-    // Turn it around so the front points toward -Z, like the other cars.
-    model.rotation.y += Math.PI;
-    model.updateMatrixWorld(true);
-
     const scale = Math.min(1.78 / Math.max(size.x, 0.001), 3.75 / Math.max(size.z, 0.001), 1.65 / Math.max(size.y, 0.001));
-    // The previous build used 10% of the normalized size; halve it again.
-    model.scale.setScalar(scale * 0.05);
+    // Reverse only the car's length axis. This keeps the roof upright while
+    // changing front/rear orientation to match the direction of traffic.
+    const finalScale = scale * 0.05;
+    model.scale.set(finalScale, finalScale, -finalScale);
     model.updateMatrixWorld(true);
     bounds = new THREE.Box3().setFromObject(model);
     const center = bounds.getCenter(new THREE.Vector3());
