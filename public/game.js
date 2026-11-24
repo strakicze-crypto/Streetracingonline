@@ -511,24 +511,37 @@ async function loadPlayerModel() {
     model.position.y -= bounds.min.y;
 
     model.traverse(object => {
-      if (object.isMesh) {
-        object.castShadow = true;
-        object.receiveShadow = true;
-        if (object.material) {
-          const materials = Array.isArray(object.material) ? object.material : [object.material];
-          const partName = (object.name + ' ' + materials.map(material => material.name || '').join(' ')).toLowerCase();
-          const keepOriginalFinish = /glass|window|wheel|tire|tyre|rubber|lamp|light|head|tail|chrome|grille|interior|seat|mirror|plastic|black/.test(partName);
-          materials.forEach(material => {
-            if ('side' in material) material.side = THREE.DoubleSide;
-            if (!keepOriginalFinish && material.color) {
-              material.color.set(0xbfc7cf);
-              material.metalness = 0.82;
-              material.roughness = 0.26;
-              material.needsUpdate = true;
-            }
-          });
+      if (!object.isMesh) return;
+      object.castShadow = true;
+      object.receiveShadow = true;
+      if (!object.material) return;
+
+      // Give each mesh its own material so recoloring the body cannot also
+      // change a shared window, wheel or rear-lamp material.
+      const sourceMaterials = Array.isArray(object.material) ? object.material : [object.material];
+      const partName = (object.name + ' ' + sourceMaterials.map(material => material.name || '').join(' ')).toLowerCase();
+      const materials = sourceMaterials.map(source => {
+        const material = source.clone();
+        const color = material.color || new THREE.Color(0xffffff);
+        const maxChannel = Math.max(color.r, color.g, color.b);
+        const minChannel = Math.min(color.r, color.g, color.b);
+        const saturation = maxChannel > 0 ? (maxChannel - minChannel) / maxChannel : 0;
+        const isEmissive = material.emissive && material.emissive.getHex() !== 0;
+        const isGlassLike = material.transparent || material.opacity < 0.98 ||
+          (material.roughness !== undefined && material.roughness < 0.34);
+        const keepOriginalFinish = /glass|window|wheel|tire|tyre|rubber|lamp|light|head|tail|brake|chrome|grille|interior|seat|mirror|plastic|black/.test(partName) ||
+          isEmissive || isGlassLike || maxChannel < 0.22;
+        if (!keepOriginalFinish && material.color) {
+          material.color.set(0xbfc7cf);
+          if ('metalness' in material) material.metalness = 0.72;
+          if ('roughness' in material) material.roughness = 0.32;
         }
-      }
+        // Keep imported surfaces solid; do not expose triangulation as wire lines.
+        if ('wireframe' in material) material.wireframe = false;
+        material.needsUpdate = true;
+        return material;
+      });
+      object.material = Array.isArray(object.material) ? materials : materials[0];
     });
     player.remove(fallbackPlayer);
     player.add(model);
