@@ -497,7 +497,7 @@ async function loadPlayerModel() {
     }
 
     const scale = Math.min(1.78 / Math.max(size.x, 0.001), 3.75 / Math.max(size.z, 0.001), 1.65 / Math.max(size.y, 0.001));
-    model.scale.setScalar(scale);
+    model.scale.setScalar(scale * 0.1);
     model.updateMatrixWorld(true);
     bounds = new THREE.Box3().setFromObject(model);
     const center = bounds.getCenter(new THREE.Vector3());
@@ -520,10 +520,10 @@ async function loadPlayerModel() {
 
     const indicatorMaterials = { left: [], right: [] };
     for (const side of [-1, 1]) {
-      for (const z of [-1.72, 1.72]) {
+      for (const z of [-0.172, 0.172]) {
         const material = new THREE.MeshStandardMaterial({ color: 0xffa21a, emissive: 0xff8500, emissiveIntensity: 0, roughness: 0.25, metalness: 0.05 });
-        const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.085, 10, 8), material);
-        lamp.position.set(side * 0.78, 0.62, z);
+        const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.0085, 10, 8), material);
+        lamp.position.set(side * 0.078, 0.062, z);
         player.add(lamp);
         indicatorMaterials[side < 0 ? 'left' : 'right'].push(material);
       }
