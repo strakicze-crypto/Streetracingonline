@@ -500,7 +500,9 @@ async function loadPlayerModel() {
     // Reverse only the car's length axis. This keeps the roof upright while
     // changing front/rear orientation to match the direction of traffic.
     const finalScale = scale * 0.05;
-    model.scale.set(finalScale, finalScale, -finalScale);
+    // Flip the vertical and length axes together: this is a 180-degree roll,
+    // which puts the wheels below the roof and restores the front/rear direction.
+    model.scale.set(finalScale, -finalScale, -finalScale);
     model.updateMatrixWorld(true);
     bounds = new THREE.Box3().setFromObject(model);
     const center = bounds.getCenter(new THREE.Vector3());
