@@ -496,8 +496,14 @@ async function loadPlayerModel() {
       size = bounds.getSize(new THREE.Vector3());
     }
 
+    // The supplied model faces the opposite direction from the game's traffic.
+    // Turn it around so the front points toward -Z, like the other cars.
+    model.rotation.y += Math.PI;
+    model.updateMatrixWorld(true);
+
     const scale = Math.min(1.78 / Math.max(size.x, 0.001), 3.75 / Math.max(size.z, 0.001), 1.65 / Math.max(size.y, 0.001));
-    model.scale.setScalar(scale * 0.1);
+    // The previous build used 10% of the normalized size; halve it again.
+    model.scale.setScalar(scale * 0.05);
     model.updateMatrixWorld(true);
     bounds = new THREE.Box3().setFromObject(model);
     const center = bounds.getCenter(new THREE.Vector3());
@@ -520,10 +526,10 @@ async function loadPlayerModel() {
 
     const indicatorMaterials = { left: [], right: [] };
     for (const side of [-1, 1]) {
-      for (const z of [-0.172, 0.172]) {
+      for (const z of [-0.086, 0.086]) {
         const material = new THREE.MeshStandardMaterial({ color: 0xffa21a, emissive: 0xff8500, emissiveIntensity: 0, roughness: 0.25, metalness: 0.05 });
-        const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.0085, 10, 8), material);
-        lamp.position.set(side * 0.078, 0.062, z);
+        const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.00425, 10, 8), material);
+        lamp.position.set(side * 0.039, 0.031, z);
         player.add(lamp);
         indicatorMaterials[side < 0 ? 'left' : 'right'].push(material);
       }
