@@ -502,7 +502,7 @@ async function loadPlayerModel() {
     const finalScale = scale * 0.05;
     // Flip the vertical and length axes together: this is a 180-degree roll,
     // which puts the wheels below the roof and restores the front/rear direction.
-    model.scale.set(finalScale, -finalScale, -finalScale);
+    model.scale.set(-finalScale, -finalScale, finalScale);
     model.updateMatrixWorld(true);
     bounds = new THREE.Box3().setFromObject(model);
     const center = bounds.getCenter(new THREE.Vector3());
