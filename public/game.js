@@ -499,7 +499,7 @@ async function loadPlayerModel() {
     const scale = Math.min(1.78 / Math.max(size.x, 0.001), 3.75 / Math.max(size.z, 0.001), 1.65 / Math.max(size.y, 0.001));
     // Reverse only the car's length axis. This keeps the roof upright while
     // changing front/rear orientation to match the direction of traffic.
-    const finalScale = scale * 0.05;
+    const finalScale = scale * 0.04; // 20% smaller than the currently tested model
     // Flip the vertical and length axes together: this is a 180-degree roll,
     // which puts the wheels below the roof and restores the front/rear direction.
     model.scale.set(-finalScale, -finalScale, finalScale);
@@ -516,7 +516,17 @@ async function loadPlayerModel() {
         object.receiveShadow = true;
         if (object.material) {
           const materials = Array.isArray(object.material) ? object.material : [object.material];
-          materials.forEach(material => { if ('side' in material) material.side = THREE.DoubleSide; });
+          const partName = (object.name + ' ' + materials.map(material => material.name || '').join(' ')).toLowerCase();
+          const keepOriginalFinish = /glass|window|wheel|tire|tyre|rubber|lamp|light|head|tail|chrome|grille|interior|seat|mirror|plastic|black/.test(partName);
+          materials.forEach(material => {
+            if ('side' in material) material.side = THREE.DoubleSide;
+            if (!keepOriginalFinish && material.color) {
+              material.color.set(0xbfc7cf);
+              material.metalness = 0.82;
+              material.roughness = 0.26;
+              material.needsUpdate = true;
+            }
+          });
         }
       }
     });
