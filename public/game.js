@@ -450,9 +450,65 @@ function makeTruck(color = 0xd9d9d9) {
   return truck;
 }
 
-const player = makeCar(0xe83d4d, 0, false);
+const player = new THREE.Group();
+const fallbackPlayer = makeCar(0xe83d4d, 0, true);
+player.add(fallbackPlayer);
+player.userData.indicators = fallbackPlayer.userData.indicators;
+player.userData.collisionLength = 3.75;
 player.position.set(0, 0, 4);
 scene.add(player);
+
+// Load the supplied Fiat Stilo COLLADA model. Keep the red car as a fallback until loading succeeds.
+async function loadPlayerModel() {
+  try {
+    const { ColladaLoader } = await import('https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/loaders/ColladaLoader.js');
+    const loader = new ColladaLoader();
+    const collada = await new Promise((resolve, reject) => loader.load('./assets/model.dae', resolve, undefined, reject));
+    const model = collada.scene;
+    model.updateMatrixWorld(true);
+    let bounds = new THREE.Box3().setFromObject(model);
+    let size = bounds.getSize(new THREE.Vector3());
+    if (size.x > size.z) model.rotation.y = Math.PI / 2;
+    model.updateMatrixWorld(true);
+    bounds = new THREE.Box3().setFromObject(model);
+    size = bounds.getSize(new THREE.Vector3());
+    const scale = Math.min(1.78 / Math.max(size.x, 0.001), 3.75 / Math.max(size.z, 0.001), 1.65 / Math.max(size.y, 0.001));
+    model.scale.setScalar(scale);
+    model.updateMatrixWorld(true);
+    bounds = new THREE.Box3().setFromObject(model);
+    const center = bounds.getCenter(new THREE.Vector3());
+    model.position.x -= center.x;
+    model.position.z -= center.z;
+    model.position.y -= bounds.min.y;
+    model.traverse(object => {
+      if (object.isMesh) {
+        object.castShadow = true;
+        object.receiveShadow = true;
+        if (object.material) {
+          const materials = Array.isArray(object.material) ? object.material : [object.material];
+          materials.forEach(material => { if ('side' in material) material.side = THREE.DoubleSide; });
+        }
+      }
+    });
+    player.remove(fallbackPlayer);
+    player.add(model);
+    const indicatorMaterials = { left: [], right: [] };
+    for (const side of [-1, 1]) {
+      for (const z of [-1.72, 1.72]) {
+        const material = new THREE.MeshStandardMaterial({ color: 0xffa21a, emissive: 0xff8500, emissiveIntensity: 0, roughness: 0.25, metalness: 0.05 });
+        const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.085, 10, 8), material);
+        lamp.position.set(side * 0.78, 0.62, z);
+        player.add(lamp);
+        indicatorMaterials[side < 0 ? 'left' : 'right'].push(material);
+      }
+    }
+    player.userData.indicators = indicatorMaterials;
+    console.info('Fiat Stilo model loaded', size);
+  } catch (error) {
+    console.warn('Fiat Stilo model could not be loaded; using the red fallback car.', error);
+  }
+}
+loadPlayerModel();
 
 // Traffic cars create an actual overtaking challenge on the road.
 const trafficCars = [];
