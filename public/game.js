@@ -522,15 +522,12 @@ async function loadPlayerModel() {
       const partName = (object.name + ' ' + sourceMaterials.map(material => material.name || '').join(' ')).toLowerCase();
       const materials = sourceMaterials.map(source => {
         const material = source.clone();
-        const color = material.color || new THREE.Color(0xffffff);
-        const maxChannel = Math.max(color.r, color.g, color.b);
-        const minChannel = Math.min(color.r, color.g, color.b);
-        const saturation = maxChannel > 0 ? (maxChannel - minChannel) / maxChannel : 0;
         const isEmissive = material.emissive && material.emissive.getHex() !== 0;
-        const isGlassLike = material.transparent || material.opacity < 0.98 ||
-          (material.roughness !== undefined && material.roughness < 0.34);
-        const keepOriginalFinish = /glass|window|wheel|tire|tyre|rubber|lamp|light|head|tail|brake|chrome|grille|interior|seat|mirror|plastic|black/.test(partName) ||
-          isEmissive || isGlassLike || maxChannel < 0.22;
+        const isGlassLike = material.transparent || material.opacity < 0.98;
+        // Preserve only clearly identifiable glass, wheels, lights and trim.
+        // Dark body panels must receive the same silver paint as the rest.
+        const keepOriginalFinish = /glass|window|wheel|tire|tyre|rubber|lamp|light|head|tail|brake|chrome|grille|interior|seat|mirror/.test(partName) ||
+          isEmissive || isGlassLike;
         if (!keepOriginalFinish && material.color) {
           material.color.set(0xbfc7cf);
           if ('metalness' in material) material.metalness = 0.72;
