@@ -466,8 +466,17 @@ async function loadPlayerModel() {
     const collada = await new Promise((resolve, reject) => loader.load('./assets/model.dae', resolve, undefined, reject));
     const model = collada.scene;
 
-    // SketchUp exports can include an enormous construction/floor plane.
-    // Remove oversized meshes before measuring the actual vehicle.
+    // SketchUp exports contain separate line geometry for visible edges.
+    // Remove these line objects to eliminate the white triangulation overlay.
+    const edgeObjects = [];
+    model.traverse(object => {
+      if (object.isLine || object.isLineSegments || object.isLineLoop) edgeObjects.push(object);
+    });
+    edgeObjects.forEach(object => {
+      if (object.parent) object.parent.remove(object);
+    });
+
+    // Remove oversized construction/floor geometry before measuring the car.
     model.updateMatrixWorld(true);
     const oversized = [];
     model.traverse(object => {
@@ -516,24 +525,25 @@ async function loadPlayerModel() {
       object.receiveShadow = true;
       if (!object.material) return;
 
-      // Give each mesh its own material so recoloring the body cannot also
-      // change a shared window, wheel or rear-lamp material.
+      // Recolor each material slot independently. SketchUp can combine body
+      // paint and trim on one mesh, so a mesh-wide name test is too broad.
       const sourceMaterials = Array.isArray(object.material) ? object.material : [object.material];
-      const partName = (object.name + ' ' + sourceMaterials.map(material => material.name || '').join(' ')).toLowerCase();
       const materials = sourceMaterials.map(source => {
         const material = source.clone();
+        const name = (source.name || '').toLowerCase();
         const isEmissive = material.emissive && material.emissive.getHex() !== 0;
-        const isGlassLike = material.transparent || material.opacity < 0.98;
-        // Preserve only clearly identifiable glass, wheels, lights and trim.
-        // Dark body panels must receive the same silver paint as the rest.
-        const keepOriginalFinish = /glass|window|wheel|tire|tyre|rubber|lamp|light|head|tail|brake|chrome|grille|interior|seat|mirror/.test(partName) ||
-          isEmissive || isGlassLike;
+        const isTransparent = material.transparent || material.opacity < 0.98;
+        const keepOriginalFinish =
+          /plastic1|inner_rim1|rim1|material_14|material_3|glass|window|wheel|tire|tyre|rubber|lamp|light|head|tail|brake|chrome|grille|interior|seat|mirror/.test(name) ||
+          isEmissive || isTransparent;
+
+        // All opaque body materials, including the nearly black material_5,
+        // receive one silver finish on both sides of the car.
         if (!keepOriginalFinish && material.color) {
           material.color.set(0xbfc7cf);
           if ('metalness' in material) material.metalness = 0.72;
           if ('roughness' in material) material.roughness = 0.32;
         }
-        // Keep imported surfaces solid; do not expose triangulation as wire lines.
         if ('wireframe' in material) material.wireframe = false;
         material.needsUpdate = true;
         return material;
