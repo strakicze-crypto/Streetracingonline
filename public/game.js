@@ -540,18 +540,11 @@ async function loadPlayerModel() {
         // All opaque body materials, including the nearly black material_5,
         // receive one silver finish on both sides of the car.
         if (!keepOriginalFinish && material.color) {
-          // Diagnostic paint: MeshBasicMaterial ignores scene lighting, shadows,
-          // surface normals and metallic reflections. If the body becomes uniform,
-          // the previous two-tone appearance came from lighting/reflections rather
-          // than separate source paint colors or geometry.
-          const diagnosticPaint = new THREE.MeshBasicMaterial({
-            color: 0xbfc7cf,
-            side: material.side,
-            vertexColors: material.vertexColors,
-            fog: false
-          });
-          diagnosticPaint.name = (source.name || 'body') + '_diagnostic_unlit_silver';
-          return diagnosticPaint;
+          // Restore the original physically lit silver finish after the
+          // unlit diagnostic. Keep the source material for glass, lamps and trim.
+          material.color.set(0xbfc7cf);
+          if ('metalness' in material) material.metalness = 0.72;
+          if ('roughness' in material) material.roughness = 0.32;
         }
         if ('wireframe' in material) material.wireframe = false;
         material.needsUpdate = true;
