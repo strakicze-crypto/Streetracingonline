@@ -534,7 +534,7 @@ async function loadPlayerModel() {
         const isEmissive = material.emissive && material.emissive.getHex() !== 0;
         const isTransparent = material.transparent || material.opacity < 0.98;
         const keepOriginalFinish =
-          /plastic1|inner_rim1|rim1|material_14|material_3|glass|window|wheel|tire|tyre|rubber|lamp|light|head|tail|brake|chrome|grille|interior|seat|mirror/.test(name) ||
+          /plastic1|inner_rim1|rim1|glass|window|wheel|tire|tyre|rubber|lamp|light|head|tail|brake|chrome|grille|interior|seat|mirror/.test(name) ||
           isEmissive || isTransparent;
 
         // All opaque body materials, including the nearly black material_5,
