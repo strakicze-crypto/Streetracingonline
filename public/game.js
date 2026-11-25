@@ -511,6 +511,12 @@ async function loadPlayerModel() {
     model.position.y -= bounds.min.y;
 
     model.traverse(object => {
+      // SketchUp may export its visible mesh edges as separate line objects.
+      // They are not part of the car body and must not be rendered in-game.
+      if (object.isLine || object.isLineSegments || object.isPoints) {
+        if (object.parent) object.parent.remove(object);
+        return;
+      }
       if (!object.isMesh) return;
       object.castShadow = true;
       object.receiveShadow = true;
@@ -522,26 +528,27 @@ async function loadPlayerModel() {
       const partName = (object.name + ' ' + sourceMaterials.map(material => material.name || '').join(' ')).toLowerCase();
       const materials = sourceMaterials.map(source => {
         const material = source.clone();
-        const color = material.color || new THREE.Color(0xffffff);
-        const maxChannel = Math.max(color.r, color.g, color.b);
-        const minChannel = Math.min(color.r, color.g, color.b);
-        const saturation = maxChannel > 0 ? (maxChannel - minChannel) / maxChannel : 0;
         const isEmissive = material.emissive && material.emissive.getHex() !== 0;
         const isGlassLike = material.transparent || material.opacity < 0.98 ||
-          (material.roughness !== undefined && material.roughness < 0.34);
+          (material.roughness !== undefined && material.roughness < 0.2);
         const keepOriginalFinish = /glass|window|wheel|tire|tyre|rubber|lamp|light|head|tail|brake|chrome|grille|interior|seat|mirror|plastic|black/.test(partName) ||
-          isEmissive || isGlassLike || maxChannel < 0.22;
+          isEmissive || isGlassLike;
         if (!keepOriginalFinish && material.color) {
           material.color.set(0xbfc7cf);
           if ('metalness' in material) material.metalness = 0.72;
           if ('roughness' in material) material.roughness = 0.32;
         }
-        // Keep imported surfaces solid; do not expose triangulation as wire lines.
+        // Avoid missing faces on imported or mirrored SketchUp geometry.
+        if ('side' in material) material.side = THREE.DoubleSide;
         if ('wireframe' in material) material.wireframe = false;
         material.needsUpdate = true;
         return material;
       });
       object.material = Array.isArray(object.material) ? materials : materials[0];
+      // Rebuild normals so adjacent triangles shade consistently.
+      if (object.geometry && object.geometry.attributes && object.geometry.attributes.position) {
+        object.geometry.computeVertexNormals();
+      }
     });
     player.remove(fallbackPlayer);
     player.add(model);
