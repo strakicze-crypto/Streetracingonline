@@ -48,6 +48,11 @@ sun.position.set(-18, 30, 15);
 sun.castShadow = true;
 scene.add(sun);
 
+// Softer fill light from the opposite side to reduce harsh body-panel contrast.
+const fillLight = new THREE.DirectionalLight(0xffffff, 1.15);
+fillLight.position.set(18, 18, -15);
+scene.add(fillLight);
+
 const mat = (color, roughness = 0.8) => new THREE.MeshStandardMaterial({ color, roughness });
 const roadMat = mat(0x252b35), lineMat = mat(0xe9edf0), grassMat = mat(0x506a53), curbMat = mat(0xc4c8ca);
 const ground = new THREE.Mesh(new THREE.PlaneGeometry(500, 500), grassMat);
