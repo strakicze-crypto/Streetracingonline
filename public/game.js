@@ -525,23 +525,27 @@ async function loadPlayerModel() {
       object.receiveShadow = true;
       if (!object.material) return;
 
-      // Recolor each material slot independently. SketchUp can combine body
-      // paint and trim on one mesh, so a mesh-wide name test is too broad.
+      // The COLLADA file uses four separate neutral materials across the
+      // body shell. Match those finishes to one silver paint, but never touch
+      // wheel/tire parts: material_5 is also reused on the tire geometry.
       const sourceMaterials = Array.isArray(object.material) ? object.material : [object.material];
+      let parent = object;
+      let hierarchyName = '';
+      while (parent) {
+        hierarchyName += ' ' + (parent.name || '');
+        parent = parent.parent;
+      }
+      const isWheelPart = /wheel|tire|tyre|rim/i.test(hierarchyName);
       const materials = sourceMaterials.map(source => {
         const material = source.clone();
         const name = (source.name || '').toLowerCase();
+        const isBodyPaint = /^(_1|_2|material_1|material_5)$/.test(name);
         const isEmissive = material.emissive && material.emissive.getHex() !== 0;
         const isTransparent = material.transparent || material.opacity < 0.98;
-        const isKnownDarkBodyPaint = /^material_(2|5)$/.test(name);
-        const keepOriginalFinish =
-          /plastic1|inner_rim1|rim1|material_14|material_3|edge_color12800255|glass|window|wheel|tire|tyre|rubber|lamp|light|head|tail|brake|chrome|grille|interior|seat|mirror/.test(name) ||
-          isEmissive || isTransparent;
 
-        // These two named dark Lambert materials are used by the body shell
-        // in the supplied Stilo model. Force only these to the same silver
-        // paint; leave glass, lamps, wheels and trim on their source finish.
-        if ((!keepOriginalFinish || isKnownDarkBodyPaint) && material.color) {
+        // Preserve the original red lamps, blue glass, black trim and wheels.
+        // Only the four neutral shell materials are unified to silver.
+        if (isBodyPaint && !isWheelPart && !isEmissive && !isTransparent && material.color) {
           material.color.set(0xbfc7cf);
           if ('metalness' in material) material.metalness = 0.72;
           if ('roughness' in material) material.roughness = 0.32;
