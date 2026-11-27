@@ -42,14 +42,16 @@ renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 root.appendChild(renderer.domElement);
 
-scene.add(new THREE.HemisphereLight(0xe4f3ff, 0x39404c, 2.1));
-const sun = new THREE.DirectionalLight(0xffffff, 2.1);
+// Brighter, even lighting makes the imported Stilo body and lamps readable.
+scene.add(new THREE.AmbientLight(0xffffff, 0.85));
+scene.add(new THREE.HemisphereLight(0xf2f7ff, 0x737b86, 2.8));
+const sun = new THREE.DirectionalLight(0xffffff, 2.4);
 sun.position.set(-18, 30, 15);
-sun.castShadow = true;
+sun.castShadow = false;
 scene.add(sun);
 
-// Softer fill light from the opposite side to reduce harsh body-panel contrast.
-const fillLight = new THREE.DirectionalLight(0xffffff, 1.15);
+// Stronger fill light from the opposite side prevents the body disappearing into black.
+const fillLight = new THREE.DirectionalLight(0xffffff, 2.0);
 fillLight.position.set(18, 18, -15);
 scene.add(fillLight);
 
