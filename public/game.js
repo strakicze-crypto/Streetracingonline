@@ -468,7 +468,7 @@ async function loadPlayerModel() {
   try {
     const { ColladaLoader } = await import('https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/loaders/ColladaLoader.js');
     const loader = new ColladaLoader();
-    const collada = await new Promise((resolve, reject) => loader.load('./assets/model.dae', resolve, undefined, reject));
+    const collada = await new Promise((resolve, reject) => loader.load('./assets/model_stilo_rebuilt.dae', resolve, undefined, reject));
     const model = collada.scene;
 
     // SketchUp exports contain separate line geometry for visible edges.
@@ -524,63 +524,17 @@ async function loadPlayerModel() {
     model.position.z -= center.z;
     model.position.y -= bounds.min.y;
 
-    // Classify actual mesh pieces by their position and size in the assembled
-    // vehicle, rather than relying on COLLADA material names (which are reused).
-    model.updateMatrixWorld(true);
-    const vehicleBounds = new THREE.Box3().setFromObject(model);
-    const vehicleSize = vehicleBounds.getSize(new THREE.Vector3());
-    const vehicleHeight = Math.max(vehicleSize.y, 0.0001);
-
+    // The rebuilt COLLADA file assigns one dedicated silver material to
+    // exterior body panels while keeping glass, lamps, tires and trim separate.
+    // Keep imported material colors intact; only enable normal scene shadows.
     model.traverse(object => {
       if (!object.isMesh) return;
       object.castShadow = true;
       object.receiveShadow = true;
       if (!object.material) return;
-
-      if (!object.geometry.boundingBox) object.geometry.computeBoundingBox();
-      const meshBounds = object.geometry.boundingBox.clone().applyMatrix4(object.matrixWorld);
-      const meshSize = meshBounds.getSize(new THREE.Vector3());
-      const meshCenter = meshBounds.getCenter(new THREE.Vector3());
-      const heightPosition = (meshCenter.y - vehicleBounds.min.y) / vehicleHeight;
-      const horizontalSpan = Math.max(
-        meshSize.x / Math.max(vehicleSize.x, 0.0001),
-        meshSize.z / Math.max(vehicleSize.z, 0.0001)
-      );
-
       const sourceMaterials = Array.isArray(object.material) ? object.material : [object.material];
       const materials = sourceMaterials.map(source => {
         const material = source.clone();
-        const color = source.color;
-        const isEmissive = material.emissive && material.emissive.getHex() !== 0;
-        const isTransparent = material.transparent || material.opacity < 0.98;
-        let isLightNeutral = false;
-        if (color) {
-          const channels = [color.r, color.g, color.b];
-          const brightest = Math.max(...channels);
-          const darkest = Math.min(...channels);
-          // Include darker factory-gray body panels too; the previous cutoff
-          // left one side of the shell in its original dark finish.
-          isLightNeutral = brightest > 0.075 && brightest - darkest < 0.14;
-        }
-
-        // Silver body panels are light, neutral meshes in the middle/upper
-        // vehicle envelope. Blue glass, red lamps, dark trim and low wheels
-        // are filtered out by color, transparency, emissive state and bounds.
-        const isBodySurface = isLightNeutral &&
-          heightPosition > 0.22 && heightPosition < 0.94 &&
-          horizontalSpan > 0.085;
-
-        // The COLLADA inspection identified material_5 as a dark factory
-        // body finish used on the large body-shell and roof meshes (including
-        // the previously black-looking half). Recolor it explicitly instead
-        // of relying only on brightness-based geometry classification.
-        const isKnownDarkBodyMaterial = source.name === 'material_5';
-        if ((isBodySurface || isKnownDarkBodyMaterial) &&
-            !isEmissive && !isTransparent && material.color) {
-          material.color.set(0xbfc7cf);
-          if ('metalness' in material) material.metalness = 0.72;
-          if ('roughness' in material) material.roughness = 0.32;
-        }
         if ('wireframe' in material) material.wireframe = false;
         material.needsUpdate = true;
         return material;
