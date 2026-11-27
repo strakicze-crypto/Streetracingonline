@@ -553,15 +553,17 @@ async function loadPlayerModel() {
           const channels = [color.r, color.g, color.b];
           const brightest = Math.max(...channels);
           const darkest = Math.min(...channels);
-          isLightNeutral = darkest > 0.16 && brightest - darkest < 0.14;
+          // Include darker factory-gray body panels too; the previous cutoff
+          // left one side of the shell in its original dark finish.
+          isLightNeutral = brightest > 0.075 && brightest - darkest < 0.14;
         }
 
         // Silver body panels are light, neutral meshes in the middle/upper
         // vehicle envelope. Blue glass, red lamps, dark trim and low wheels
         // are filtered out by color, transparency, emissive state and bounds.
         const isBodySurface = isLightNeutral &&
-          heightPosition > 0.16 && heightPosition < 0.93 &&
-          horizontalSpan > 0.10;
+          heightPosition > 0.22 && heightPosition < 0.94 &&
+          horizontalSpan > 0.085;
 
         if (isBodySurface && !isEmissive && !isTransparent && material.color) {
           material.color.set(0xbfc7cf);
