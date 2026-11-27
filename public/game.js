@@ -468,7 +468,7 @@ async function loadPlayerModel() {
   try {
     const { ColladaLoader } = await import('https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/loaders/ColladaLoader.js');
     const loader = new ColladaLoader();
-    const collada = await new Promise((resolve, reject) => loader.load('./assets/model_stilo_rebuilt.dae', resolve, undefined, reject));
+    const collada = await new Promise((resolve, reject) => loader.load('./assets/model.dae?v=6', resolve, undefined, reject));
     const model = collada.scene;
 
     // SketchUp exports contain separate line geometry for visible edges.
@@ -524,8 +524,7 @@ async function loadPlayerModel() {
     model.position.z -= center.z;
     model.position.y -= bounds.min.y;
 
-    // The rebuilt COLLADA file assigns one dedicated silver material to
-    // exterior body panels while keeping glass, lamps, tires and trim separate.
+    // Use the original COLLADA model while the rebuilt material bindings are being corrected.
     // Keep imported material colors intact; only enable normal scene shadows.
     model.traverse(object => {
       if (!object.isMesh) return;
