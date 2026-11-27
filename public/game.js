@@ -537,6 +537,9 @@ async function loadPlayerModel() {
       const materials = sourceMaterials.map(source => {
         const material = source.clone();
         if ('wireframe' in material) material.wireframe = false;
+        // Some exported Stilo body panels have reversed face winding; render both sides
+        // so the exterior sheet metal does not disappear and expose the cabin interior.
+        material.side = THREE.DoubleSide;
         material.needsUpdate = true;
         return material;
       });
