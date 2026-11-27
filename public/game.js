@@ -570,7 +570,13 @@ async function loadPlayerModel() {
           heightPosition > 0.22 && heightPosition < 0.94 &&
           horizontalSpan > 0.085;
 
-        if (isBodySurface && !isEmissive && !isTransparent && material.color) {
+        // The COLLADA inspection identified material_5 as a dark factory
+        // body finish used on the large body-shell and roof meshes (including
+        // the previously black-looking half). Recolor it explicitly instead
+        // of relying only on brightness-based geometry classification.
+        const isKnownDarkBodyMaterial = source.name === 'material_5';
+        if ((isBodySurface || isKnownDarkBodyMaterial) &&
+            !isEmissive && !isTransparent && material.color) {
           material.color.set(0xbfc7cf);
           if ('metalness' in material) material.metalness = 0.72;
           if ('roughness' in material) material.roughness = 0.32;
