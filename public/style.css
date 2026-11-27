@@ -15,3 +15,7 @@
 [hidden]{display:none!important}
 
 #drive-score{color:#ffcf70!important;font-weight:900;font-size:13px;text-shadow:0 1px 8px #000}
+
+
+/* Build marker: stays clear of the brand and speed HUD. */
+#build-version{position:fixed;z-index:4;top:58px;left:18px;padding:3px 7px;border:1px solid #ffffff38;border-radius:6px;background:#080d18cc;color:#dce6f3;font:700 9px/1 Arial,Helvetica,sans-serif;letter-spacing:1px;text-shadow:0 1px 4px #000;pointer-events:none}
