@@ -519,33 +519,51 @@ async function loadPlayerModel() {
     model.position.z -= center.z;
     model.position.y -= bounds.min.y;
 
+    // Classify actual mesh pieces by their position and size in the assembled
+    // vehicle, rather than relying on COLLADA material names (which are reused).
+    model.updateMatrixWorld(true);
+    const vehicleBounds = new THREE.Box3().setFromObject(model);
+    const vehicleSize = vehicleBounds.getSize(new THREE.Vector3());
+    const vehicleHeight = Math.max(vehicleSize.y, 0.0001);
+
     model.traverse(object => {
       if (!object.isMesh) return;
       object.castShadow = true;
       object.receiveShadow = true;
       if (!object.material) return;
 
-      // The COLLADA file uses four separate neutral materials across the
-      // body shell. Match those finishes to one silver paint, but never touch
-      // wheel/tire parts: material_5 is also reused on the tire geometry.
+      if (!object.geometry.boundingBox) object.geometry.computeBoundingBox();
+      const meshBounds = object.geometry.boundingBox.clone().applyMatrix4(object.matrixWorld);
+      const meshSize = meshBounds.getSize(new THREE.Vector3());
+      const meshCenter = meshBounds.getCenter(new THREE.Vector3());
+      const heightPosition = (meshCenter.y - vehicleBounds.min.y) / vehicleHeight;
+      const horizontalSpan = Math.max(
+        meshSize.x / Math.max(vehicleSize.x, 0.0001),
+        meshSize.z / Math.max(vehicleSize.z, 0.0001)
+      );
+
       const sourceMaterials = Array.isArray(object.material) ? object.material : [object.material];
-      let parent = object;
-      let hierarchyName = '';
-      while (parent) {
-        hierarchyName += ' ' + (parent.name || '');
-        parent = parent.parent;
-      }
-      const isWheelPart = /wheel|tire|tyre|rim/i.test(hierarchyName);
       const materials = sourceMaterials.map(source => {
         const material = source.clone();
-        const name = (source.name || '').toLowerCase();
-        const isBodyPaint = /^(_1|_2|material_1|material_5)$/.test(name);
+        const color = source.color;
         const isEmissive = material.emissive && material.emissive.getHex() !== 0;
         const isTransparent = material.transparent || material.opacity < 0.98;
+        let isLightNeutral = false;
+        if (color) {
+          const channels = [color.r, color.g, color.b];
+          const brightest = Math.max(...channels);
+          const darkest = Math.min(...channels);
+          isLightNeutral = darkest > 0.16 && brightest - darkest < 0.14;
+        }
 
-        // Preserve the original red lamps, blue glass, black trim and wheels.
-        // Only the four neutral shell materials are unified to silver.
-        if (isBodyPaint && !isWheelPart && !isEmissive && !isTransparent && material.color) {
+        // Silver body panels are light, neutral meshes in the middle/upper
+        // vehicle envelope. Blue glass, red lamps, dark trim and low wheels
+        // are filtered out by color, transparency, emissive state and bounds.
+        const isBodySurface = isLightNeutral &&
+          heightPosition > 0.16 && heightPosition < 0.93 &&
+          horizontalSpan > 0.10;
+
+        if (isBodySurface && !isEmissive && !isTransparent && material.color) {
           material.color.set(0xbfc7cf);
           if ('metalness' in material) material.metalness = 0.72;
           if ('roughness' in material) material.roughness = 0.32;
