@@ -535,7 +535,7 @@ async function loadPlayerModel() {
         const isTransparent = material.transparent || material.opacity < 0.98;
         const isKnownDarkBodyPaint = /^material_(2|5)$/.test(name);
         const keepOriginalFinish =
-          /plastic1|inner_rim1|rim1|glass|window|wheel|tire|tyre|rubber|lamp|light|head|tail|brake|chrome|grille|interior|seat|mirror/.test(name) ||
+          /plastic1|inner_rim1|rim1|material_14|material_3|edge_color12800255|glass|window|wheel|tire|tyre|rubber|lamp|light|head|tail|brake|chrome|grille|interior|seat|mirror/.test(name) ||
           isEmissive || isTransparent;
 
         // These two named dark Lambert materials are used by the body shell
