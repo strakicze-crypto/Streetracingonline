@@ -533,15 +533,15 @@ async function loadPlayerModel() {
         const name = (source.name || '').toLowerCase();
         const isEmissive = material.emissive && material.emissive.getHex() !== 0;
         const isTransparent = material.transparent || material.opacity < 0.98;
+        const isKnownDarkBodyPaint = /^material_(2|5)$/.test(name);
         const keepOriginalFinish =
           /plastic1|inner_rim1|rim1|glass|window|wheel|tire|tyre|rubber|lamp|light|head|tail|brake|chrome|grille|interior|seat|mirror/.test(name) ||
           isEmissive || isTransparent;
 
-        // All opaque body materials, including the nearly black material_5,
-        // receive one silver finish on both sides of the car.
-        if (!keepOriginalFinish && material.color) {
-          // Restore the original physically lit silver finish after the
-          // unlit diagnostic. Keep the source material for glass, lamps and trim.
+        // These two named dark Lambert materials are used by the body shell
+        // in the supplied Stilo model. Force only these to the same silver
+        // paint; leave glass, lamps, wheels and trim on their source finish.
+        if ((!keepOriginalFinish || isKnownDarkBodyPaint) && material.color) {
           material.color.set(0xbfc7cf);
           if ('metalness' in material) material.metalness = 0.72;
           if ('roughness' in material) material.roughness = 0.32;
